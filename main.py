@@ -77,12 +77,11 @@ def find_matches(image_path: str, opposite_type: str, top_n: int = 3):
 
 # ---------- 測試用 ----------
 if __name__ == "__main__":
-    # 先塞幾筆「拾獲物」進資料庫
-    insert_item("test_photos/found_bottle.jpg", "found", "水壺", "圖書館", "藍色水壺")
-    insert_item("test_photos/found_umbrella.jpg", "found", "雨傘", "教室", "黑色雨傘")
+    # 先塞一筆「拾獲物」進資料庫
+    insert_item("test_photos/doll_1.jpg", "found", "玩偶", "宿舍", "測試用玩偶")
 
-    # 模擬有人來協尋，拿一張「遺失物」照片去找相似的拾獲物
-    matches = find_matches("test_photos/lost_bottle.jpg", opposite_type="found", top_n=3)
+    # 模擬有人來協尋，拿另一張照片去找相似的拾獲物
+    matches = find_matches("test_photos/doll_2.jpg", opposite_type="found", top_n=3)
 
     print("\n找到的相似物品：")
     for item_id, image_url, category, location, description, similarity in matches:
