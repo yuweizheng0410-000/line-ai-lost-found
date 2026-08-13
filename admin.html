@@ -68,9 +68,24 @@
   }
   .tag.found { background: #38a169; }
   .tag.lost { background: #dd6b20; }
+  .status-pending { color: #c53030; font-weight: bold; }
   .status-open { color: #2b6cb0; font-weight: bold; }
   .status-matched { color: #d69e2e; font-weight: bold; }
   .status-closed { color: #718096; }
+  .status-rejected { color: #a0aec0; text-decoration: line-through; }
+  .approve-btn { background: #38a169; }
+  .approve-btn:hover { background: #2f855a; }
+  .reject-btn { background: #c53030; }
+  .reject-btn:hover { background: #9b2c2c; }
+  .pending-badge {
+    display: inline-block;
+    background: #c53030;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin-left: 8px;
+  }
   .action-btn {
     padding: 4px 8px;
     font-size: 12px;
@@ -81,7 +96,7 @@
 </head>
 <body>
 
-<h1>校園失物招領 - 後台管理</h1>
+<h1>校園失物招領 - 後台管理 <span id="pendingBadge"></span></h1>
 <p id="loading">載入中...</p>
 
 <div class="toolbar">
@@ -94,10 +109,12 @@
   </label>
   <label>狀態:
     <select id="filterStatus">
+      <option value="pending">待審核</option>
       <option value="">全部</option>
       <option value="open">待配對</option>
       <option value="matched">已配對</option>
       <option value="closed">已結案</option>
+      <option value="rejected">已拒絕</option>
     </select>
   </label>
   <button onclick="loadItems()">套用篩選</button>
@@ -123,6 +140,9 @@
   // 如果你的 API 不是跑在本機 8000 埠,改這裡
   const API_BASE = "http://127.0.0.1:8000";
 
+  // 本地快取目前畫面上的物品資料,標記狀態時不用重新整頁,直接改這裡再重繪那一列
+  let itemsCache = {};
+
   async function loadItems() {
     const type = document.getElementById("filterType").value;
     const status = document.getElementById("filterStatus").value;
@@ -139,7 +159,13 @@
     try {
       const res = await fetch(`${API_BASE}/items?${params.toString()}`);
       const data = await res.json();
-      renderItems(data.items || []);
+      const items = data.items || [];
+
+      itemsCache = {};
+      for (const item of items) itemsCache[item.id] = item;
+
+      renderItems(items);
+      updatePendingBadge();
       loadingEl.style.display = "none";
       tableEl.style.display = "table";
     } catch (err) {
@@ -157,26 +183,48 @@
     }
 
     for (const item of items) {
-      const typeLabel = item.type === "found" ? "拾獲" : "遺失";
-      const typeClass = item.type === "found" ? "found" : "lost";
-      const statusLabel = { open: "待配對", matched: "已配對", closed: "已結案" }[item.status] || item.status;
-      const statusClass = "status-" + item.status;
-
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${item.image_url ? `<img class="thumb" src="${item.image_url}" onerror="this.style.display='none'">` : "-"}</td>
-        <td><span class="tag ${typeClass}">${typeLabel}</span></td>
-        <td>${item.category || "-"}</td>
-        <td>${item.location || "-"}</td>
-        <td>${item.description || "-"}</td>
-        <td class="${statusClass}">${statusLabel}</td>
-        <td>${formatDate(item.created_at)}</td>
-        <td>
-          ${item.status !== "closed" ? `<button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>` : ""}
-        </td>
-      `;
+      tr.setAttribute("data-item-id", item.id);
       tbody.appendChild(tr);
+      fillRow(tr, item);
     }
+  }
+
+  // 把單一 <tr> 的內容,依 item 資料填好(新增列、或更新列都共用這個函式)
+  function fillRow(tr, item) {
+    const typeLabel = item.type === "found" ? "拾獲" : "遺失";
+    const typeClass = item.type === "found" ? "found" : "lost";
+    const statusLabel = {
+      pending: "待審核",
+      open: "待配對",
+      matched: "已配對",
+      closed: "已結案",
+      rejected: "已拒絕",
+    }[item.status] || item.status;
+    const statusClass = "status-" + item.status;
+
+    let actionHtml = "";
+    if (item.status === "pending") {
+      actionHtml = `
+        <button class="action-btn approve-btn" onclick="approveItem('${item.id}')">審核通過</button>
+        <button class="action-btn reject-btn" onclick="rejectItem('${item.id}')">拒絕</button>
+      `;
+    } else if (item.status === "open" || item.status === "matched") {
+      actionHtml = `<button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>`;
+    } else {
+      actionHtml = `<span style="color:#aaa;">-</span>`;
+    }
+
+    tr.innerHTML = `
+      <td>${item.image_url ? `<img class="thumb" src="${item.image_url}" onerror="this.style.display='none'">` : "-"}</td>
+      <td><span class="tag ${typeClass}">${typeLabel}</span></td>
+      <td>${item.category || "-"}</td>
+      <td>${item.location || "-"}</td>
+      <td>${item.description || "-"}</td>
+      <td class="${statusClass}">${statusLabel}</td>
+      <td>${formatDate(item.created_at)}</td>
+      <td>${actionHtml}</td>
+    `;
   }
 
   function formatDate(isoStr) {
@@ -185,8 +233,58 @@
     return d.toLocaleString("zh-TW", { hour12: false });
   }
 
-  async function updateStatus(itemId, newStatus) {
+  async function approveItem(itemId) {
+    if (!confirm("確定審核通過這筆物品嗎?通過後會公開讓使用者搜尋比對。")) return;
+    await callActionApi(itemId, `${API_BASE}/items/${itemId}/approve`, "open");
+  }
+
+  async function rejectItem(itemId) {
+    if (!confirm("確定要拒絕這筆物品嗎?")) return;
+    await callActionApi(itemId, `${API_BASE}/items/${itemId}/reject`, "rejected");
+  }
+
+  async function callActionApi(itemId, url, newStatus) {
+    const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const actionCell = tr ? tr.querySelector("td:last-child") : null;
+    if (actionCell) actionCell.innerHTML = `<span style="color:#aaa;">處理中...</span>`;
+
+    try {
+      const res = await fetch(url, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "操作失敗");
+
+      // 目前篩選狀態如果就是「待審核」,審核後這筆會離開清單,直接從畫面移除
+      const currentFilter = document.getElementById("filterStatus").value;
+      if (currentFilter === "pending" && tr) {
+        tr.remove();
+        delete itemsCache[itemId];
+        updatePendingBadge();
+        if (Object.keys(itemsCache).length === 0) {
+          document.getElementById("itemsBody").innerHTML =
+            `<tr><td colspan="8" style="text-align:center;color:#888;">目前沒有符合條件的物品</td></tr>`;
+        }
+      } else if (itemsCache[itemId] && tr) {
+        itemsCache[itemId].status = newStatus;
+        fillRow(tr, itemsCache[itemId]);
+      }
+    } catch (err) {
+      alert("操作失敗: " + err.message);
+      if (tr && itemsCache[itemId]) fillRow(tr, itemsCache[itemId]);
+    }
+  }
+
+  function updatePendingBadge() {
+    const badge = document.getElementById("pendingBadge");
+    const count = Object.values(itemsCache).filter(i => i.status === "pending").length;
+    badge.textContent = count > 0 ? `${count} 筆待審核` : "";
+    badge.className = count > 0 ? "pending-badge" : "";
+  }
     if (!confirm("確定要將這筆物品標記為已結案嗎?")) return;
+
+    // 先在畫面上立刻反映(樂觀更新),按鈕暫時失能避免重複點擊
+    const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const actionCell = tr ? tr.querySelector("td:last-child") : null;
+    if (actionCell) actionCell.innerHTML = `<span style="color:#aaa;">更新中...</span>`;
 
     const formData = new FormData();
     formData.append("status", newStatus);
@@ -197,9 +295,17 @@
         body: formData,
       });
       if (!res.ok) throw new Error("更新失敗");
-      loadItems(); // 重新整理清單
+
+      // 成功後,更新本地快取,並只重繪這一列,不重新打整個 /items
+      if (itemsCache[itemId]) {
+        itemsCache[itemId].status = newStatus;
+        if (tr) fillRow(tr, itemsCache[itemId]);
+      } else {
+        loadItems(); // 保險起見,若本地找不到這筆快取就整頁重抓
+      }
     } catch (err) {
       alert("更新失敗: " + err.message);
+      if (tr) fillRow(tr, itemsCache[itemId]); // 還原原本畫面
     }
   }
 
