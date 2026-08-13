@@ -4,15 +4,17 @@ import torch
 import open_clip
 import psycopg2
 from PIL import Image
+from io import BytesIO
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from supabase import create_client, Client
 
 load_dotenv()
 
 app = FastAPI(title="校園失物招領 API")
 
-# 開放跨來源請求(之後 LIFF 前端要呼叫這支 API 會需要)
+# 開放跨來源請求(前端頁面要呼叫這支 API 會需要)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,12 +29,16 @@ model, _, preprocess = open_clip.create_model_and_transforms(
 )
 model.eval().to(device)
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# ---------- 連線 Supabase Storage(照片存這裡,不落地存本機) ----------
+supabase: Client = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY"),
+)
+BUCKET_NAME = "item-photos"
 
 
-def get_image_embedding(image_path: str) -> list[float]:
-    image = preprocess(Image.open(image_path).convert("RGB")).unsqueeze(0).to(device)
+def get_image_embedding_from_bytes(image_bytes: bytes) -> list[float]:
+    image = preprocess(Image.open(BytesIO(image_bytes)).convert("RGB")).unsqueeze(0).to(device)
     with torch.no_grad():
         embedding = model.encode_image(image)
         embedding /= embedding.norm(dim=-1, keepdim=True)
@@ -44,8 +50,8 @@ def get_connection():
 
 
 # ---------- API 1:上傳物品(拾獲通報 or 遺失協尋)----------
-# 新提交的物品一律先進入「待審核」狀態,不會出現在配對結果裡,
-# 要等後台審核通過(status 改成 open)才會開放搜尋比對。
+# 照片直接上傳到 Supabase Storage(雲端),不寫進本機硬碟。
+# 新提交的物品一律先進入「待審核」狀態,審核通過後才會出現在配對結果裡。
 @app.post("/items")
 async def create_item(
     file: UploadFile = File(...),
@@ -54,17 +60,23 @@ async def create_item(
     location: str = Form(...),
     description: str = Form(""),
 ):
-    # 存檔到本機
-    ext = file.filename.split(".")[-1]
-    saved_filename = f"{uuid.uuid4()}.{ext}"
-    saved_path = os.path.join(UPLOAD_DIR, saved_filename)
-    with open(saved_path, "wb") as f:
-        f.write(await file.read())
+    # 讀取上傳檔案的 bytes(直接在記憶體處理,不寫進本機硬碟)
+    file_bytes = await file.read()
 
     # 算 embedding
-    embedding = get_image_embedding(saved_path)
+    embedding = get_image_embedding_from_bytes(file_bytes)
 
-    # 寫入資料庫,狀態固定寫 pending(待審核)
+    # 上傳到 Supabase Storage,拿到公開網址
+    ext = file.filename.split(".")[-1]
+    storage_filename = f"{uuid.uuid4()}.{ext}"
+    supabase.storage.from_(BUCKET_NAME).upload(
+        storage_filename,
+        file_bytes,
+        {"content-type": file.content_type},
+    )
+    public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(storage_filename)
+
+    # 寫入資料庫,image_url 存雲端網址,狀態固定寫 pending(待審核)
     conn = get_connection()
     cur = conn.cursor()
     cur.execute(
@@ -73,14 +85,14 @@ async def create_item(
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         RETURNING id;
         """,
-        (type, saved_path, embedding, category, location, description, "pending"),
+        (type, public_url, embedding, category, location, description, "pending"),
     )
     new_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
 
-    return {"id": new_id, "status": "pending", "message": "上傳成功,待後台審核後才會公開"}
+    return {"id": new_id, "image_url": public_url, "status": "pending", "message": "上傳成功,待後台審核後才會公開"}
 
 
 # ---------- API 2:查詢某物品的相似配對(只比對已審核通過的 open 物品)----------
@@ -89,7 +101,6 @@ def get_matches(item_id: str, top_n: int = 3):
     conn = get_connection()
     cur = conn.cursor()
 
-    # 先查這筆物品本身的 embedding 和 type
     cur.execute("SELECT embedding, type FROM items WHERE id = %s;", (item_id,))
     row = cur.fetchone()
     if row is None:
@@ -100,7 +111,6 @@ def get_matches(item_id: str, top_n: int = 3):
     embedding, item_type = row
     opposite_type = "found" if item_type == "lost" else "lost"
 
-    # 查對向池裡最相似的,只找 status = open(已審核通過)的物品
     cur.execute(
         """
         SELECT id, image_url, category, location, description,
