@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>校園失物招領 - 後台管理</title>
+<style>
+  body {
+    font-family: "Microsoft JhengHei", sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+    padding: 24px;
+    color: #222;
+  }
+  h1 {
+    margin-bottom: 4px;
+  }
+  .toolbar {
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  select, button {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  button {
+    background: #2b6cb0;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #1e4e8c;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  th {
+    background: #2b6cb0;
+    color: white;
+  }
+  img.thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: white;
+  }
+  .tag.found { background: #38a169; }
+  .tag.lost { background: #dd6b20; }
+  .status-open { color: #2b6cb0; font-weight: bold; }
+  .status-matched { color: #d69e2e; font-weight: bold; }
+  .status-closed { color: #718096; }
+  .action-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin-right: 4px;
+  }
+  #loading { color: #888; margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<h1>校園失物招領 - 後台管理</h1>
+<p id="loading">載入中...</p>
+
+<div class="toolbar">
+  <label>類型:
+    <select id="filterType">
+      <option value="">全部</option>
+      <option value="found">拾獲</option>
+      <option value="lost">遺失</option>
+    </select>
+  </label>
+  <label>狀態:
+    <select id="filterStatus">
+      <option value="">全部</option>
+      <option value="open">待配對</option>
+      <option value="matched">已配對</option>
+      <option value="closed">已結案</option>
+    </select>
+  </label>
+  <button onclick="loadItems()">套用篩選</button>
+</div>
+
+<table id="itemsTable" style="display:none;">
+  <thead>
+    <tr>
+      <th>照片</th>
+      <th>類型</th>
+      <th>分類</th>
+      <th>地點</th>
+      <th>描述</th>
+      <th>狀態</th>
+      <th>建立時間</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody id="itemsBody"></tbody>
+</table>
+
+<script>
+  // 如果你的 API 不是跑在本機 8000 埠,改這裡
+  const API_BASE = "http://127.0.0.1:8000";
+
+  async function loadItems() {
+    const type = document.getElementById("filterType").value;
+    const status = document.getElementById("filterStatus").value;
+
+    const params = new URLSearchParams();
+    if (type) params.append("type", type);
+    if (status) params.append("status", status);
+
+    const loadingEl = document.getElementById("loading");
+    const tableEl = document.getElementById("itemsTable");
+    loadingEl.style.display = "block";
+    tableEl.style.display = "none";
+
+    try {
+      const res = await fetch(`${API_BASE}/items?${params.toString()}`);
+      const data = await res.json();
+      renderItems(data.items || []);
+      loadingEl.style.display = "none";
+      tableEl.style.display = "table";
+    } catch (err) {
+      loadingEl.textContent = "載入失敗,請確認 API 伺服器是否正在執行(" + err.message + ")";
+    }
+  }
+
+  function renderItems(items) {
+    const tbody = document.getElementById("itemsBody");
+    tbody.innerHTML = "";
+
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;">目前沒有符合條件的物品</td></tr>`;
+      return;
+    }
+
+    for (const item of items) {
+      const typeLabel = item.type === "found" ? "拾獲" : "遺失";
+      const typeClass = item.type === "found" ? "found" : "lost";
+      const statusLabel = { open: "待配對", matched: "已配對", closed: "已結案" }[item.status] || item.status;
+      const statusClass = "status-" + item.status;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.image_url ? `<img class="thumb" src="${item.image_url}" onerror="this.style.display='none'">` : "-"}</td>
+        <td><span class="tag ${typeClass}">${typeLabel}</span></td>
+        <td>${item.category || "-"}</td>
+        <td>${item.location || "-"}</td>
+        <td>${item.description || "-"}</td>
+        <td class="${statusClass}">${statusLabel}</td>
+        <td>${formatDate(item.created_at)}</td>
+        <td>
+          ${item.status !== "closed" ? `<button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>` : ""}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function formatDate(isoStr) {
+    if (!isoStr) return "-";
+    const d = new Date(isoStr);
+    return d.toLocaleString("zh-TW", { hour12: false });
+  }
+
+  async function updateStatus(itemId, newStatus) {
+    if (!confirm("確定要將這筆物品標記為已結案嗎?")) return;
+
+    const formData = new FormData();
+    formData.append("status", newStatus);
+
+    try {
+      const res = await fetch(`${API_BASE}/items/${itemId}`, {
+        method: "PATCH",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("更新失敗");
+      loadItems(); // 重新整理清單
+    } catch (err) {
+      alert("更新失敗: " + err.message);
+    }
+  }
+
+  // 頁面載入時自動抓一次資料
+  loadItems();
+</script>
+
+</body>
+</html>
