@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校園失物招領</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Microsoft JhengHei", sans-serif;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 16px;
+    color: #222;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #718096;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .tabs {
+    display: flex;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    color: #718096;
+    border-bottom: 3px solid transparent;
+  }
+  .tab.active.found {
+    color: #2f855a;
+    border-bottom-color: #38a169;
+    background: #f0fff4;
+  }
+  .tab.active.lost {
+    color: #c05621;
+    border-bottom-color: #dd6b20;
+    background: #fffaf0;
+  }
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    color: #4a5568;
+    margin: 14px 0 6px;
+  }
+  label:first-child { margin-top: 0; }
+  input[type="text"], select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed #cbd5e0;
+    border-radius: 8px;
+    background: #f7fafc;
+    font-size: 13px;
+  }
+  #previewImg {
+    display: none;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-top: 10px;
+    background: #f0f0f0;
+  }
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+  }
+  .submit-btn.found { background: #38a169; }
+  .submit-btn.found:hover { background: #2f855a; }
+  .submit-btn.lost { background: #dd6b20; }
+  .submit-btn.lost:hover { background: #c05621; }
+  .submit-btn:disabled { background: #cbd5e0; cursor: not-allowed; }
+
+  .result-box {
+    display: none;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  .result-box.success { border-left: 4px solid #38a169; }
+  .result-box.error { border-left: 4px solid #c53030; }
+  .result-id {
+    background: #f7fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+    margin: 8px 0;
+    color: #4a5568;
+  }
+
+  .match-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #edf2f7;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  .match-item img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .match-info { font-size: 13px; line-height: 1.6; }
+  .match-similarity {
+    display: inline-block;
+    background: #ebf8ff;
+    color: #2b6cb0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .lookup-section {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-top: 24px;
+  }
+  .lookup-section h2 {
+    font-size: 15px;
+    margin: 0 0 12px;
+  }
+  .lookup-row {
+    display: flex;
+    gap: 8px;
+  }
+  .lookup-row input {
+    flex: 1;
+  }
+  .lookup-row button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #4a5568;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 6px;
+  }
+  .status-pending { background: #fed7d7; color: #c53030; }
+  .status-open { background: #bee3f8; color: #2b6cb0; }
+  .status-matched { background: #feebc8; color: #dd6b20; }
+  .status-closed { background: #e2e8f0; color: #718096; }
+  .status-rejected { background: #e2e8f0; color: #a0aec0; }
+
+  #loadingSpinner { text-align: center; color: #718096; font-size: 13px; padding: 12px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>校園失物招領</h1>
+  <p class="subtitle">用 AI 圖像比對,幫你更快找回遺失物</p>
+
+  <div class="tabs">
+    <div class="tab active found" id="tabFound" onclick="switchTab('found')">📦 我撿到東西</div>
+    <div class="tab lost" id="tabLost" onclick="switchTab('lost')">🔍 我遺失東西</div>
+  </div>
+
+  <div class="card">
+    <form id="itemForm">
+      <label>物品照片</label>
+      <input type="file" id="photoInput" accept="image/*" required>
+      <img id="previewImg" alt="預覽">
+
+      <label>物品分類</label>
+      <select id="categoryInput" required>
+        <option value="">請選擇分類</option>
+        <option value="3C產品">3C 產品</option>
+        <option value="證件">證件</option>
+        <option value="衣物">衣物</option>
+        <option value="文具">文具</option>
+        <option value="水壺/餐具">水壺 / 餐具</option>
+        <option value="鑰匙">鑰匙</option>
+        <option value="其他">其他</option>
+      </select>
+
+      <label id="locationLabel">拾獲地點</label>
+      <input type="text" id="locationInput" placeholder="例如:圖書館三樓、宿舍交誼廳" required>
+
+      <label>物品描述(顏色、品牌、特徵等)</label>
+      <textarea id="descriptionInput" placeholder="例如:黑色水壺,有一個小熊貼紙"></textarea>
+
+      <button type="submit" class="submit-btn found" id="submitBtn">送出拾獲通報</button>
+    </form>
+  </div>
+
+  <div id="loadingSpinner">處理中,請稍候...</div>
+
+  <div class="result-box" id="resultBox"></div>
+
+  <div class="lookup-section">
+    <h2>🔎 查詢我的通報狀態 / 配對結果</h2>
+    <div class="lookup-row">
+      <input type="text" id="lookupIdInput" placeholder="貼上你通報時拿到的編號">
+      <button onclick="lookupItem()">查詢</button>
+    </div>
+    <div id="lookupResult"></div>
+  </div>
+</div>
+
+<script>
+  // 如果你的 API 不是跑在本機 8000 埠,改這裡(之後部署到雲端也是改這行)
+  const API_BASE = "http://127.0.0.1:8000";
+
+  let currentType = "found"; // found 或 lost
+
+  function switchTab(type) {
+    currentType = type;
+    document.getElementById("tabFound").classList.toggle("active", type === "found");
+    document.getElementById("tabLost").classList.toggle("active", type === "lost");
+
+    const submitBtn = document.getElementById("submitBtn");
+    const locationLabel = document.getElementById("locationLabel");
+
+    if (type === "found") {
+      submitBtn.textContent = "送出拾獲通報";
+      submitBtn.className = "submit-btn found";
+      locationLabel.textContent = "拾獲地點";
+    } else {
+      submitBtn.textContent = "送出協尋申請";
+      submitBtn.className = "submit-btn lost";
+      locationLabel.textContent = "遺失地點";
+    }
+
+    document.getElementById("resultBox").style.display = "none";
+  }
+
+  // 照片預覽
+  document.getElementById("photoInput").addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    const img = document.getElementById("previewImg");
+    if (file) {
+      img.src = URL.createObjectURL(file);
+      img.style.display = "block";
+    } else {
+      img.style.display = "none";
+    }
+  });
+
+  // 提交表單
+  document.getElementById("itemForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const photoFile = document.getElementById("photoInput").files[0];
+    const category = document.getElementById("categoryInput").value;
+    const location = document.getElementById("locationInput").value;
+    const description = document.getElementById("descriptionInput").value;
+
+    if (!photoFile) {
+      alert("請上傳照片");
+      return;
+    }
+
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    document.getElementById("loadingSpinner").style.display = "block";
+    document.getElementById("resultBox").style.display = "none";
+
+    const formData = new FormData();
+    formData.append("file", photoFile);
+    formData.append("type", currentType);
+    formData.append("category", category);
+    formData.append("location", location);
+    formData.append("description", description);
+
+    try {
+      const res = await fetch(`${API_BASE}/items`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "提交失敗");
+
+      showResult(true, `
+        <strong>✅ 提交成功!</strong>
+        <p style="margin:8px 0;font-size:13px;color:#4a5568;">你的通報已送出,將由校方審核後正式公開比對,請保留以下編號以便查詢狀態:</p>
+        <div class="result-id">${data.id}</div>
+        <button onclick="copyId('${data.id}')" style="margin-top:6px;padding:6px 12px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;font-size:12px;">複製編號</button>
+      `);
+
+      // 清空表單
+      document.getElementById("itemForm").reset();
+      document.getElementById("previewImg").style.display = "none";
+
+      // 自動帶入查詢欄位,方便馬上查看狀態
+      document.getElementById("lookupIdInput").value = data.id;
+
+    } catch (err) {
+      showResult(false, `<strong>❌ 提交失敗</strong><p style="font-size:13px;color:#c53030;">${err.message}</p>`);
+    } finally {
+      submitBtn.disabled = false;
+      document.getElementById("loadingSpinner").style.display = "none";
+    }
+  });
+
+  function showResult(success, html) {
+    const box = document.getElementById("resultBox");
+    box.className = "result-box " + (success ? "success" : "error");
+    box.innerHTML = html;
+    box.style.display = "block";
+  }
+
+  function copyId(id) {
+    navigator.clipboard.writeText(id).then(() => alert("編號已複製"));
+  }
+
+  // ---------- 查詢功能 ----------
+  async function lookupItem() {
+    const itemId = document.getElementById("lookupIdInput").value.trim();
+    const resultEl = document.getElementById("lookupResult");
+
+    if (!itemId) {
+      resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">請輸入編號</p>`;
+      return;
+    }
+
+    resultEl.innerHTML = `<p style="color:#718096;font-size:13px;">查詢中...</p>`;
+
+    try {
+      // 先查所有物品清單,從中找到這筆(因為目前沒有單筆查詢 API,用清單比對)
+      const listRes = await fetch(`${API_BASE}/items`);
+      const listData = await listRes.json();
+      const item = (listData.items || []).find(i => i.id === itemId);
+
+      if (!item) {
+        resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">找不到這個編號,請確認輸入正確</p>`;
+        return;
+      }
+
+      const statusLabel = {
+        pending: "審核中",
+        open: "已公開比對中",
+        matched: "已找到配對",
+        closed: "已結案",
+        rejected: "審核未通過",
+      }[item.status] || item.status;
+
+      let html = `
+        <div style="margin-top:10px;font-size:13px;">
+          <strong>${item.type === "found" ? "拾獲通報" : "協尋申請"}</strong>
+          <span class="status-badge status-${item.status}">${statusLabel}</span>
+          <p style="color:#718096;margin:6px 0;">${item.category} ・ ${item.location}</p>
+        </div>
+      `;
+
+      // 如果已經公開(open)或已配對,查一下有沒有相似結果
+      if (item.status === "open" || item.status === "matched") {
+        const matchRes = await fetch(`${API_BASE}/items/${itemId}/matches`);
+        const matchData = await matchRes.json();
+        const matches = matchData.matches || [];
+
+        if (matches.length > 0) {
+          html += `<p style="font-size:13px;font-weight:bold;margin-top:10px;">找到 ${matches.length} 筆可能相符的物品:</p>`;
+          for (const m of matches) {
+            html += `
+              <div class="match-item">
+                ${m.image_url ? `<img src="${m.image_url}" onerror="this.style.display='none'">` : ""}
+                <div class="match-info">
+                  <div>${m.category} ・ ${m.location}</div>
+                  <div style="color:#718096;">${m.description || ""}</div>
+                  <span class="match-similarity">相似度 ${(m.similarity * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+            `;
+          }
+        } else {
+          html += `<p style="font-size:13px;color:#718096;margin-top:8px;">目前尚未找到相似的物品,系統會持續比對新資料</p>`;
+        }
+      } else if (item.status === "pending") {
+        html += `<p style="font-size:13px;color:#718096;margin-top:8px;">審核通過後才會開始比對配對</p>`;
+      }
+
+      resultEl.innerHTML = html;
+    } catch (err) {
+      resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">查詢失敗:${err.message}</p>`;
+    }
+  }
+</script>
+
+</body>
+</html>
