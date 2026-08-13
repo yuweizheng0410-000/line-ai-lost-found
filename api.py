@@ -138,3 +138,41 @@ def update_status(item_id: str, status: str = Form(...)):
     cur.close()
     conn.close()
     return {"message": "狀態已更新", "id": item_id, "status": status}
+
+# ---------- API 4:列出所有物品(給後台管理用)----------
+@app.get("/items")
+def list_items(status: str = None, type: str = None):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    query = "SELECT id, type, image_url, category, location, description, status, created_at FROM items WHERE 1=1"
+    params = []
+
+    if status:
+        query += " AND status = %s"
+        params.append(status)
+    if type:
+        query += " AND type = %s"
+        params.append(type)
+
+    query += " ORDER BY created_at DESC"
+
+    cur.execute(query, params)
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    items = [
+        {
+            "id": str(r[0]),
+            "type": r[1],
+            "image_url": r[2],
+            "category": r[3],
+            "location": r[4],
+            "description": r[5],
+            "status": r[6],
+            "created_at": str(r[7]),
+        }
+        for r in results
+    ]
+    return {"items": items}
