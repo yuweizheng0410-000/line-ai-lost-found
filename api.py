@@ -44,6 +44,8 @@ def get_connection():
 
 
 # ---------- API 1:上傳物品(拾獲通報 or 遺失協尋)----------
+# 新提交的物品一律先進入「待審核」狀態,不會出現在配對結果裡,
+# 要等後台審核通過(status 改成 open)才會開放搜尋比對。
 @app.post("/items")
 async def create_item(
     file: UploadFile = File(...),
@@ -62,26 +64,26 @@ async def create_item(
     # 算 embedding
     embedding = get_image_embedding(saved_path)
 
-    # 寫入資料庫
+    # 寫入資料庫,狀態固定寫 pending(待審核)
     conn = get_connection()
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO items (type, image_url, embedding, category, location, description)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO items (type, image_url, embedding, category, location, description, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         RETURNING id;
         """,
-        (type, saved_path, embedding, category, location, description),
+        (type, saved_path, embedding, category, location, description, "pending"),
     )
     new_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
 
-    return {"id": new_id, "message": "上傳成功"}
+    return {"id": new_id, "status": "pending", "message": "上傳成功,待後台審核後才會公開"}
 
 
-# ---------- API 2:查詢某物品的相似配對 ----------
+# ---------- API 2:查詢某物品的相似配對(只比對已審核通過的 open 物品)----------
 @app.get("/items/{item_id}/matches")
 def get_matches(item_id: str, top_n: int = 3):
     conn = get_connection()
@@ -98,7 +100,7 @@ def get_matches(item_id: str, top_n: int = 3):
     embedding, item_type = row
     opposite_type = "found" if item_type == "lost" else "lost"
 
-    # 查對向池裡最相似的
+    # 查對向池裡最相似的,只找 status = open(已審核通過)的物品
     cur.execute(
         """
         SELECT id, image_url, category, location, description,
@@ -139,7 +141,8 @@ def update_status(item_id: str, status: str = Form(...)):
     conn.close()
     return {"message": "狀態已更新", "id": item_id, "status": status}
 
-# ---------- API 4:列出所有物品(給後台管理用)----------
+
+# ---------- API 4:列出所有物品(給後台管理用,可用 status/type 篩選)----------
 @app.get("/items")
 def list_items(status: str = None, type: str = None):
     conn = get_connection()
@@ -176,3 +179,41 @@ def list_items(status: str = None, type: str = None):
         for r in results
     ]
     return {"items": items}
+
+
+# ---------- API 5:審核通過,讓物品正式公開參與配對(pending -> open) ----------
+@app.post("/items/{item_id}/approve")
+def approve_item(item_id: str):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE items SET status = 'open' WHERE id = %s AND status = 'pending';",
+        (item_id,),
+    )
+    if cur.rowcount == 0:
+        cur.close()
+        conn.close()
+        return {"error": "找不到待審核的物品,或此物品已審核過"}
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"message": "審核通過,已公開", "id": item_id, "status": "open"}
+
+
+# ---------- API 6:審核拒絕(pending -> rejected) ----------
+@app.post("/items/{item_id}/reject")
+def reject_item(item_id: str):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE items SET status = 'rejected' WHERE id = %s AND status = 'pending';",
+        (item_id,),
+    )
+    if cur.rowcount == 0:
+        cur.close()
+        conn.close()
+        return {"error": "找不到待審核的物品,或此物品已審核過"}
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"message": "已拒絕", "id": item_id, "status": "rejected"}
