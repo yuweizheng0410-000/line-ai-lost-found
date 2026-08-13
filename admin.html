@@ -279,6 +279,8 @@
     badge.textContent = count > 0 ? `${count} 筆待審核` : "";
     badge.className = count > 0 ? "pending-badge" : "";
   }
+
+  async function updateStatus(itemId, newStatus) {
     if (!confirm("確定要將這筆物品標記為已結案嗎?")) return;
 
     // 先在畫面上立刻反映(樂觀更新),按鈕暫時失能避免重複點擊
