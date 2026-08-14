@@ -107,6 +107,18 @@
       <option value="lost">遺失</option>
     </select>
   </label>
+  <label>物品分類:
+    <select id="filterCategory">
+      <option value="">全部</option>
+      <option value="3C產品">3C 產品</option>
+      <option value="證件">證件</option>
+      <option value="衣物">衣物</option>
+      <option value="文具">文具</option>
+      <option value="水壺/餐具">水壺 / 餐具</option>
+      <option value="鑰匙">鑰匙</option>
+      <option value="其他">其他</option>
+    </select>
+  </label>
   <label>狀態:
     <select id="filterStatus">
       <option value="pending">待審核</option>
@@ -146,10 +158,12 @@
   async function loadItems() {
     const type = document.getElementById("filterType").value;
     const status = document.getElementById("filterStatus").value;
+    const category = document.getElementById("filterCategory").value;
 
     const params = new URLSearchParams();
     if (type) params.append("type", type);
     if (status) params.append("status", status);
+    if (category) params.append("category", category);
 
     const loadingEl = document.getElementById("loading");
     const tableEl = document.getElementById("itemsTable");
