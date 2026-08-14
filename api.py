@@ -36,6 +36,10 @@ supabase: Client = create_client(
 )
 BUCKET_NAME = "item-photos"
 
+# ---------- 比對邏輯的門檻設定 ----------
+SAME_CATEGORY_THRESHOLD = 0.75   # 同分類比對時,只要達到這個分數就算有效配對
+CROSS_CATEGORY_THRESHOLD = 0.88  # 跨分類比對時,要更高分才算數(因為誤判風險較高)
+
 
 def get_image_embedding_from_bytes(image_bytes: bytes) -> list[float]:
     image = preprocess(Image.open(BytesIO(image_bytes)).convert("RGB")).unsqueeze(0).to(device)
@@ -49,6 +53,23 @@ def get_connection():
     return psycopg2.connect(os.getenv("DB_CONNECTION_STRING"))
 
 
+def build_match_result(rows, source):
+    """把資料庫查詢結果轉成回傳格式,source 標記這筆是同分類還是跨分類找到的"""
+    return [
+        {
+            "id": str(r[0]),
+            "image_url": r[1],
+            "category": r[2],
+            "location": r[3],
+            "description": r[4],
+            "similarity": round(r[5], 4),
+            "confidence": "高" if r[5] >= 0.85 else "中",
+            "match_source": source,  # "same_category" 或 "cross_category"
+        }
+        for r in rows
+    ]
+
+
 # ---------- API 1:上傳物品(拾獲通報 or 遺失協尋)----------
 # 照片直接上傳到 Supabase Storage(雲端),不寫進本機硬碟。
 # 新提交的物品一律先進入「待審核」狀態,審核通過後才會出現在配對結果裡。
@@ -60,13 +81,9 @@ async def create_item(
     location: str = Form(...),
     description: str = Form(""),
 ):
-    # 讀取上傳檔案的 bytes(直接在記憶體處理,不寫進本機硬碟)
     file_bytes = await file.read()
-
-    # 算 embedding
     embedding = get_image_embedding_from_bytes(file_bytes)
 
-    # 上傳到 Supabase Storage,拿到公開網址
     ext = file.filename.split(".")[-1]
     storage_filename = f"{uuid.uuid4()}.{ext}"
     supabase.storage.from_(BUCKET_NAME).upload(
@@ -76,7 +93,6 @@ async def create_item(
     )
     public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(storage_filename)
 
-    # 寫入資料庫,image_url 存雲端網址,狀態固定寫 pending(待審核)
     conn = get_connection()
     cur = conn.cursor()
     cur.execute(
@@ -95,49 +111,71 @@ async def create_item(
     return {"id": new_id, "image_url": public_url, "status": "pending", "message": "上傳成功,待後台審核後才會公開"}
 
 
-# ---------- API 2:查詢某物品的相似配對(只比對已審核通過的 open 物品)----------
+# ---------- API 2:查詢某物品的相似配對(混合邏輯)----------
+# 階段一:先在「同分類」裡找,門檻較寬鬆(0.75),因為同分類誤判機率較低
+# 階段二:如果同分類找不到達標的結果,才放寬到「全部分類」,但要求更高分(0.88)才算數
 @app.get("/items/{item_id}/matches")
 def get_matches(item_id: str, top_n: int = 3):
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT embedding, type FROM items WHERE id = %s;", (item_id,))
+    cur.execute("SELECT embedding, type, category FROM items WHERE id = %s;", (item_id,))
     row = cur.fetchone()
     if row is None:
         cur.close()
         conn.close()
         return {"error": "找不到這筆物品"}
 
-    embedding, item_type = row
+    embedding, item_type, item_category = row
     opposite_type = "found" if item_type == "lost" else "lost"
 
+    # ---- 階段一:同分類比對 ----
+    cur.execute(
+        """
+        SELECT id, image_url, category, location, description,
+               1 - (embedding <=> %s::vector) AS similarity
+        FROM items
+        WHERE type = %s AND status = 'open' AND category = %s AND id != %s
+          AND 1 - (embedding <=> %s::vector) >= %s
+        ORDER BY embedding <=> %s::vector
+        LIMIT %s;
+        """,
+        (embedding, opposite_type, item_category, item_id,
+         embedding, SAME_CATEGORY_THRESHOLD, embedding, top_n),
+    )
+    same_category_rows = cur.fetchall()
+
+    if same_category_rows:
+        # 同分類就找到達標結果,直接回傳,不需要再查跨分類
+        cur.close()
+        conn.close()
+        return {
+            "matches": build_match_result(same_category_rows, "same_category"),
+            "strategy": "same_category",
+        }
+
+    # ---- 階段二:同分類沒有達標結果,放寬到全部分類,但要更高分才算數 ----
     cur.execute(
         """
         SELECT id, image_url, category, location, description,
                1 - (embedding <=> %s::vector) AS similarity
         FROM items
         WHERE type = %s AND status = 'open' AND id != %s
+          AND 1 - (embedding <=> %s::vector) >= %s
         ORDER BY embedding <=> %s::vector
         LIMIT %s;
         """,
-        (embedding, opposite_type, item_id, embedding, top_n),
+        (embedding, opposite_type, item_id,
+         embedding, CROSS_CATEGORY_THRESHOLD, embedding, top_n),
     )
-    results = cur.fetchall()
+    cross_category_rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    matches = [
-        {
-            "id": str(r[0]),
-            "image_url": r[1],
-            "category": r[2],
-            "location": r[3],
-            "description": r[4],
-            "similarity": round(r[5], 4),
-        }
-        for r in results
-    ]
-    return {"matches": matches}
+    return {
+        "matches": build_match_result(cross_category_rows, "cross_category"),
+        "strategy": "cross_category" if cross_category_rows else "no_match",
+    }
 
 
 # ---------- API 3:更新物品狀態(標記已配對/已結案)----------
