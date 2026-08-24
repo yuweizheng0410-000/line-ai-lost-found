@@ -14,7 +14,11 @@
     color: #222;
   }
   .container {
+<<<<<<< HEAD
     max-width: 480px;
+=======
+    max-width: 520px;
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     margin: 0 auto;
   }
   h1 {
@@ -38,10 +42,17 @@
   }
   .tab {
     flex: 1;
+<<<<<<< HEAD
     padding: 14px;
     text-align: center;
     cursor: pointer;
     font-size: 15px;
+=======
+    padding: 12px 6px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     font-weight: bold;
     color: #718096;
     border-bottom: 3px solid transparent;
@@ -56,6 +67,14 @@
     border-bottom-color: #dd6b20;
     background: #fffaf0;
   }
+<<<<<<< HEAD
+=======
+  .tab.active.browse {
+    color: #2b6cb0;
+    border-bottom-color: #3182ce;
+    background: #ebf8ff;
+  }
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   .card {
     background: white;
     border-radius: 10px;
@@ -135,13 +154,19 @@
     color: #4a5568;
   }
 
+<<<<<<< HEAD
   .match-item {
+=======
+  /* 配對與公開始物列表卡片樣式 */
+  .item-card {
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     display: flex;
     gap: 12px;
     padding: 12px;
     border: 1px solid #edf2f7;
     border-radius: 8px;
     margin-top: 10px;
+<<<<<<< HEAD
   }
   .match-item img {
     width: 64px;
@@ -151,6 +176,19 @@
     flex-shrink: 0;
   }
   .match-info { font-size: 13px; line-height: 1.6; }
+=======
+    background: #fff;
+  }
+  .item-card img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+    background: #edf2f7;
+  }
+  .item-info { font-size: 13px; line-height: 1.5; flex: 1; }
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   .match-similarity {
     display: inline-block;
     background: #ebf8ff;
@@ -159,8 +197,25 @@
     border-radius: 10px;
     font-size: 12px;
     font-weight: bold;
+<<<<<<< HEAD
   }
 
+=======
+    margin-top: 4px;
+  }
+
+  .type-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: white;
+    font-weight: bold;
+  }
+  .type-tag.found { background: #38a169; }
+  .type-tag.lost { background: #dd6b20; }
+
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   .lookup-section {
     background: white;
     border-radius: 10px;
@@ -203,6 +258,19 @@
   .status-closed { background: #e2e8f0; color: #718096; }
   .status-rejected { background: #e2e8f0; color: #a0aec0; }
 
+<<<<<<< HEAD
+=======
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .filter-row select {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   #loadingSpinner { text-align: center; color: #718096; font-size: 13px; padding: 12px; display: none; }
 </style>
 </head>
@@ -210,14 +278,25 @@
 
 <div class="container">
   <h1>校園失物招領</h1>
+<<<<<<< HEAD
   <p class="subtitle">用 AI 圖像比對,幫你更快找回遺失物</p>
+=======
+  <p class="subtitle">用 AI 圖像比對，幫你更快找回遺失物</p>
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
 
   <div class="tabs">
     <div class="tab active found" id="tabFound" onclick="switchTab('found')">📦 我撿到東西</div>
     <div class="tab lost" id="tabLost" onclick="switchTab('lost')">🔍 我遺失東西</div>
+<<<<<<< HEAD
   </div>
 
   <div class="card">
+=======
+    <div class="tab browse" id="tabBrowse" onclick="switchTab('browse')">📋 瀏覽招領清單</div>
+  </div>
+
+  <div class="card" id="formCard">
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     <form id="itemForm">
       <label>物品照片</label>
       <input type="file" id="photoInput" accept="image/*" required>
@@ -245,11 +324,39 @@
     </form>
   </div>
 
+<<<<<<< HEAD
+=======
+  <div class="card" id="browseCard" style="display:none;">
+    <div class="filter-row">
+      <select id="browseType" onchange="loadPublicItems()">
+        <option value="">所有類型</option>
+        <option value="found">拾獲招領</option>
+        <option value="lost">遺失協尋</option>
+      </select>
+      <select id="browseCategory" onchange="loadPublicItems()">
+        <option value="">所有分類</option>
+        <option value="3C產品">3C 產品</option>
+        <option value="證件">證件</option>
+        <option value="衣物">衣物</option>
+        <option value="文具">文具</option>
+        <option value="水壺/餐具">水壺 / 餐具</option>
+        <option value="鑰匙">鑰匙</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div id="publicItemsList">載入中...</div>
+  </div>
+
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   <div id="loadingSpinner">處理中,請稍候...</div>
 
   <div class="result-box" id="resultBox"></div>
 
+<<<<<<< HEAD
   <div class="lookup-section">
+=======
+  <div class="lookup-section" id="lookupSection">
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     <h2>🔎 查詢我的通報狀態 / 配對結果</h2>
     <div class="lookup-row">
       <input type="text" id="lookupIdInput" placeholder="貼上你通報時拿到的編號">
@@ -260,15 +367,22 @@
 </div>
 
 <script>
+<<<<<<< HEAD
   // 如果你的 API 不是跑在本機 8000 埠,改這裡(之後部署到雲端也是改這行)
   const API_BASE = "http://127.0.0.1:8000";
 
   let currentType = "found"; // found 或 lost
+=======
+  const API_BASE = "http://127.0.0.1:8000";
+
+  let currentType = "found"; // found, lost, browse
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
 
   function switchTab(type) {
     currentType = type;
     document.getElementById("tabFound").classList.toggle("active", type === "found");
     document.getElementById("tabLost").classList.toggle("active", type === "lost");
+<<<<<<< HEAD
 
     const submitBtn = document.getElementById("submitBtn");
     const locationLabel = document.getElementById("locationLabel");
@@ -281,6 +395,31 @@
       submitBtn.textContent = "送出協尋申請";
       submitBtn.className = "submit-btn lost";
       locationLabel.textContent = "遺失地點";
+=======
+    document.getElementById("tabBrowse").classList.toggle("active", type === "browse");
+
+    const formCard = document.getElementById("formCard");
+    const browseCard = document.getElementById("browseCard");
+    const submitBtn = document.getElementById("submitBtn");
+    const locationLabel = document.getElementById("locationLabel");
+
+    if (type === "browse") {
+      formCard.style.display = "none";
+      browseCard.style.display = "block";
+      loadPublicItems();
+    } else {
+      formCard.style.display = "block";
+      browseCard.style.display = "none";
+      if (type === "found") {
+        submitBtn.textContent = "送出拾獲通報";
+        submitBtn.className = "submit-btn found";
+        locationLabel.textContent = "拾獲地點";
+      } else {
+        submitBtn.textContent = "送出協尋申請";
+        submitBtn.className = "submit-btn lost";
+        locationLabel.textContent = "遺失地點";
+      }
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     }
 
     document.getElementById("resultBox").style.display = "none";
@@ -334,16 +473,25 @@
 
       showResult(true, `
         <strong>✅ 提交成功!</strong>
+<<<<<<< HEAD
         <p style="margin:8px 0;font-size:13px;color:#4a5568;">你的通報已送出,將由校方審核後正式公開比對,請保留以下編號以便查詢狀態:</p>
+=======
+        <p style="margin:8px 0;font-size:13px;color:#4a5568;">你的通報已送出，將由校方審核後正式公開比對。請保留以下編號以便查詢狀態：</p>
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
         <div class="result-id">${data.id}</div>
         <button onclick="copyId('${data.id}')" style="margin-top:6px;padding:6px 12px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;font-size:12px;">複製編號</button>
       `);
 
+<<<<<<< HEAD
       // 清空表單
       document.getElementById("itemForm").reset();
       document.getElementById("previewImg").style.display = "none";
 
       // 自動帶入查詢欄位,方便馬上查看狀態
+=======
+      document.getElementById("itemForm").reset();
+      document.getElementById("previewImg").style.display = "none";
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       document.getElementById("lookupIdInput").value = data.id;
 
     } catch (err) {
@@ -365,7 +513,57 @@
     navigator.clipboard.writeText(id).then(() => alert("編號已複製"));
   }
 
+<<<<<<< HEAD
   // ---------- 查詢功能 ----------
+=======
+  // ---------- 載入公開招領/協尋清單 ----------
+  async function loadPublicItems() {
+    const listEl = document.getElementById("publicItemsList");
+    listEl.innerHTML = `<p style="color:#718096;font-size:13px;">載入中...</p>`;
+
+    const type = document.getElementById("browseType").value;
+    const category = document.getElementById("browseCategory").value;
+
+    const params = new URLSearchParams();
+    if (type) params.append("type", type);
+    if (category) params.append("category", category);
+
+    try {
+      const res = await fetch(`${API_BASE}/items?${params.toString()}`);
+      const data = await res.json();
+      // 使用者端瀏覽介面僅展示「已公開(open)」及「已配對(matched)」的物品
+      const publicItems = (data.items || []).filter(i => i.status === "open" || i.status === "matched");
+
+      if (publicItems.length === 0) {
+        listEl.innerHTML = `<p style="color:#718096;font-size:13px;text-align:center;padding:20px 0;">目前沒有公開的物品紀錄</p>`;
+        return;
+      }
+
+      let html = "";
+      for (const item of publicItems) {
+        const typeTag = item.type === "found" 
+          ? `<span class="type-tag found">拾獲</span>` 
+          : `<span class="type-tag lost">遺失</span>`;
+
+        html += `
+          <div class="item-card">
+            ${item.image_url ? `<img src="${item.image_url}" onerror="this.style.display='none'">` : `<div style="width:72px;height:72px;background:#eee;border-radius:6px;"></div>`}
+            <div class="item-info">
+              <div>${typeTag} <strong>${item.category || "未分類"}</strong></div>
+              <div style="color:#4a5568;margin-top:2px;">📍 ${item.location || "地點未填寫"}</div>
+              <div style="color:#718096;font-size:12px;margin-top:2px;">${item.description || "無詳細描述"}</div>
+            </div>
+          </div>
+        `;
+      }
+      listEl.innerHTML = html;
+    } catch (err) {
+      listEl.innerHTML = `<p style="color:#c53030;font-size:13px;">載入失敗: ${err.message}</p>`;
+    }
+  }
+
+  // ---------- 查詢功能與多筆比對結果展示 ----------
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   async function lookupItem() {
     const itemId = document.getElementById("lookupIdInput").value.trim();
     const resultEl = document.getElementById("lookupResult");
@@ -378,7 +576,10 @@
     resultEl.innerHTML = `<p style="color:#718096;font-size:13px;">查詢中...</p>`;
 
     try {
+<<<<<<< HEAD
       // 先查所有物品清單,從中找到這筆(因為目前沒有單筆查詢 API,用清單比對)
+=======
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       const listRes = await fetch(`${API_BASE}/items`);
       const listData = await listRes.json();
       const item = (listData.items || []).find(i => i.id === itemId);
@@ -404,13 +605,17 @@
         </div>
       `;
 
+<<<<<<< HEAD
       // 如果已經公開(open)或已配對,查一下有沒有相似結果
+=======
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       if (item.status === "open" || item.status === "matched") {
         const matchRes = await fetch(`${API_BASE}/items/${itemId}/matches`);
         const matchData = await matchRes.json();
         const matches = matchData.matches || [];
 
         if (matches.length > 0) {
+<<<<<<< HEAD
           html += `<p style="font-size:13px;font-weight:bold;margin-top:10px;">找到 ${matches.length} 筆可能相符的物品:</p>`;
           for (const m of matches) {
             html += `
@@ -420,23 +625,52 @@
                   <div>${m.category} ・ ${m.location}</div>
                   <div style="color:#718096;">${m.description || ""}</div>
                   <span class="match-similarity">相似度 ${(m.similarity * 100).toFixed(1)}%</span>
+=======
+          html += `<p style="font-size:13px;font-weight:bold;margin-top:12px;">🎯 系統為您比對出 ${matches.length} 筆可能相符的物品：</p>`;
+          
+          // 逐一列出後端傳回的每一筆匹配項目 (不受限於只有一筆)
+          for (const m of matches) {
+            const similarityPercent = (m.similarity * 100).toFixed(1);
+            html += `
+              <div class="item-card">
+                ${m.image_url ? `<img src="${m.image_url}" onerror="this.style.display='none'">` : ""}
+                <div class="item-info">
+                  <div><strong>${m.category}</strong> ・ 📍 ${m.location}</div>
+                  <div style="color:#718096;margin:2px 0;">${m.description || "無描述"}</div>
+                  <span class="match-similarity">相似度 ${similarityPercent}%</span>
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
                 </div>
               </div>
             `;
           }
         } else {
+<<<<<<< HEAD
           html += `<p style="font-size:13px;color:#718096;margin-top:8px;">目前尚未找到相似的物品,系統會持續比對新資料</p>`;
         }
       } else if (item.status === "pending") {
         html += `<p style="font-size:13px;color:#718096;margin-top:8px;">審核通過後才會開始比對配對</p>`;
+=======
+          html += `<p style="font-size:13px;color:#718096;margin-top:8px;">目前尚未找到相似的物品，系統會持續自動比對新上傳的資料。</p>`;
+        }
+      } else if (item.status === "pending") {
+        html += `<p style="font-size:13px;color:#718096;margin-top:8px;">管理者審核通過後，系統將會為您進行 AI 圖像配對。</p>`;
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       }
 
       resultEl.innerHTML = html;
     } catch (err) {
+<<<<<<< HEAD
       resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">查詢失敗:${err.message}</p>`;
+=======
+      resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">查詢失敗: ${err.message}</p>`;
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     }
   }
 </script>
 
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)

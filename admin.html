@@ -19,13 +19,23 @@
     display: flex;
     gap: 12px;
     align-items: center;
+    HEAD
   }
   select, button {
+    flex-wrap: wrap;
+  }
+  select, input[type="text"], button {
+  1796586 (連結 GitHub 儲存庫並同步檔案)
     padding: 8px 12px;
     font-size: 14px;
     border-radius: 6px;
     border: 1px solid #ccc;
   }
+  HEAD
+  input[type="text"] {
+    width: 200px;
+  }
+  1796586 (連結 GitHub 儲存庫並同步檔案)
   button {
     background: #2b6cb0;
     color: white;
@@ -100,15 +110,27 @@
 <p id="loading">載入中...</p>
 
 <div class="toolbar">
+<<<<<<< HEAD
   <label>類型:
     <select id="filterType">
+=======
+  <label>關鍵字:
+    <input type="text" id="searchInput" placeholder="搜尋地點或描述..." oninput="filterLocalItems()">
+  </label>
+  <label>類型:
+    <select id="filterType" onchange="loadItems()">
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       <option value="">全部</option>
       <option value="found">拾獲</option>
       <option value="lost">遺失</option>
     </select>
   </label>
   <label>物品分類:
+<<<<<<< HEAD
     <select id="filterCategory">
+=======
+    <select id="filterCategory" onchange="loadItems()">
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       <option value="">全部</option>
       <option value="3C產品">3C 產品</option>
       <option value="證件">證件</option>
@@ -120,7 +142,11 @@
     </select>
   </label>
   <label>狀態:
+<<<<<<< HEAD
     <select id="filterStatus">
+=======
+    <select id="filterStatus" onchange="loadItems()">
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       <option value="pending">待審核</option>
       <option value="">全部</option>
       <option value="open">待配對</option>
@@ -129,7 +155,11 @@
       <option value="rejected">已拒絕</option>
     </select>
   </label>
+<<<<<<< HEAD
   <button onclick="loadItems()">套用篩選</button>
+=======
+  <button onclick="loadItems()">重新整理</button>
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
 </div>
 
 <table id="itemsTable" style="display:none;">
@@ -149,10 +179,16 @@
 </table>
 
 <script>
+<<<<<<< HEAD
   // 如果你的 API 不是跑在本機 8000 埠,改這裡
   const API_BASE = "http://127.0.0.1:8000";
 
   // 本地快取目前畫面上的物品資料,標記狀態時不用重新整頁,直接改這裡再重繪那一列
+=======
+  const API_BASE = "http://127.0.0.1:8000";
+
+  let rawItemsList = [];
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   let itemsCache = {};
 
   async function loadItems() {
@@ -173,12 +209,21 @@
     try {
       const res = await fetch(`${API_BASE}/items?${params.toString()}`);
       const data = await res.json();
+<<<<<<< HEAD
       const items = data.items || [];
 
       itemsCache = {};
       for (const item of items) itemsCache[item.id] = item;
 
       renderItems(items);
+=======
+      rawItemsList = data.items || [];
+
+      itemsCache = {};
+      for (const item of rawItemsList) itemsCache[item.id] = item;
+
+      filterLocalItems();
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       updatePendingBadge();
       loadingEl.style.display = "none";
       tableEl.style.display = "table";
@@ -187,6 +232,23 @@
     }
   }
 
+<<<<<<< HEAD
+=======
+  function filterLocalItems() {
+    const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
+    let filtered = rawItemsList;
+
+    if (keyword) {
+      filtered = rawItemsList.filter(item => 
+        (item.location && item.location.toLowerCase().includes(keyword)) ||
+        (item.description && item.description.toLowerCase().includes(keyword))
+      );
+    }
+
+    renderItems(filtered);
+  }
+
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   function renderItems(items) {
     const tbody = document.getElementById("itemsBody");
     tbody.innerHTML = "";
@@ -204,7 +266,10 @@
     }
   }
 
+<<<<<<< HEAD
   // 把單一 <tr> 的內容,依 item 資料填好(新增列、或更新列都共用這個函式)
+=======
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   function fillRow(tr, item) {
     const typeLabel = item.type === "found" ? "拾獲" : "遺失";
     const typeClass = item.type === "found" ? "found" : "lost";
@@ -267,11 +332,18 @@
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "操作失敗");
 
+<<<<<<< HEAD
       // 目前篩選狀態如果就是「待審核」,審核後這筆會離開清單,直接從畫面移除
+=======
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       const currentFilter = document.getElementById("filterStatus").value;
       if (currentFilter === "pending" && tr) {
         tr.remove();
         delete itemsCache[itemId];
+<<<<<<< HEAD
+=======
+        rawItemsList = rawItemsList.filter(i => i.id !== itemId);
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
         updatePendingBadge();
         if (Object.keys(itemsCache).length === 0) {
           document.getElementById("itemsBody").innerHTML =
@@ -297,7 +369,10 @@
   async function updateStatus(itemId, newStatus) {
     if (!confirm("確定要將這筆物品標記為已結案嗎?")) return;
 
+<<<<<<< HEAD
     // 先在畫面上立刻反映(樂觀更新),按鈕暫時失能避免重複點擊
+=======
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
     const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
     const actionCell = tr ? tr.querySelector("td:last-child") : null;
     if (actionCell) actionCell.innerHTML = `<span style="color:#aaa;">更新中...</span>`;
@@ -312,11 +387,15 @@
       });
       if (!res.ok) throw new Error("更新失敗");
 
+<<<<<<< HEAD
       // 成功後,更新本地快取,並只重繪這一列,不重新打整個 /items
+=======
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
       if (itemsCache[itemId]) {
         itemsCache[itemId].status = newStatus;
         if (tr) fillRow(tr, itemsCache[itemId]);
       } else {
+<<<<<<< HEAD
         loadItems(); // 保險起見,若本地找不到這筆快取就整頁重抓
       }
     } catch (err) {
@@ -326,8 +405,22 @@
   }
 
   // 頁面載入時自動抓一次資料
+=======
+        loadItems();
+      }
+    } catch (err) {
+      alert("更新失敗: " + err.message);
+      if (tr) fillRow(tr, itemsCache[itemId]);
+    }
+  }
+
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
   loadItems();
 </script>
 
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> 1796586 (連結 GitHub 儲存庫並同步檔案)
