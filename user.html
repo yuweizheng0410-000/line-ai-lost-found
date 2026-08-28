@@ -219,7 +219,6 @@
   }
   .status-pending { background: #fed7d7; color: #c53030; }
   .status-open { background: #bee3f8; color: #2b6cb0; }
-  .status-matched { background: #feebc8; color: #dd6b20; }
   .status-closed { background: #e2e8f0; color: #718096; }
   .status-rejected { background: #e2e8f0; color: #a0aec0; }
 
@@ -250,8 +249,8 @@
 
   <div class="card" id="formCard">
     <form id="itemForm">
-      <label>物品照片</label>
-      <input type="file" id="photoInput" accept="image/*" required>
+      <label>物品照片(沒有照片也可以送出,系統會改用文字描述比對)</label>
+      <input type="file" id="photoInput" accept="image/*">
       <img id="previewImg" alt="預覽">
 
       <label>物品分類</label>
@@ -370,9 +369,10 @@
     const location = document.getElementById("locationInput").value;
     const description = document.getElementById("descriptionInput").value;
 
-    if (!photoFile) {
-      alert("請上傳照片");
-      return;
+    // 沒有照片時,提醒使用者盡量補充文字描述,幫助 AI 比對準確度(但不強制擋下提交)
+    if (!photoFile && !description.trim()) {
+      const proceed = confirm("沒有照片也沒有描述,AI 比對的準確度會比較低。仍要送出嗎?");
+      if (!proceed) return;
     }
 
     const submitBtn = document.getElementById("submitBtn");
@@ -381,7 +381,7 @@
     document.getElementById("resultBox").style.display = "none";
 
     const formData = new FormData();
-    formData.append("file", photoFile);
+    if (photoFile) formData.append("file", photoFile);  // 沒有照片就不附加這個欄位,後端會改用文字比對
     formData.append("type", currentType);
     formData.append("category", category);
     formData.append("location", location);
@@ -443,9 +443,9 @@
     try {
       const res = await fetch(`${API_BASE}/items?${params.toString()}`);
       const data = await res.json();
-      // 使用者端瀏覽介面僅展示「已公開(open)」及「已配對(matched)」的物品,
-      // 待審核(pending)、已拒絕(rejected)不應該讓一般使用者看到
-      const publicItems = (data.items || []).filter(i => i.status === "open" || i.status === "matched");
+      // 使用者端瀏覽介面僅展示「已公開(open)」的物品,
+      // 待審核(pending)、已拒絕(rejected)、已結案(closed)不應該讓一般使用者看到
+      const publicItems = (data.items || []).filter(i => i.status === "open");
 
       if (publicItems.length === 0) {
         listEl.innerHTML = `<p style="color:#718096;font-size:13px;text-align:center;padding:20px 0;">目前沒有公開的物品紀錄</p>`;
@@ -501,7 +501,6 @@
       const statusLabel = {
         pending: "審核中",
         open: "已公開比對中",
-        matched: "已找到配對",
         closed: "已結案",
         rejected: "審核未通過",
       }[item.status] || item.status;
@@ -514,8 +513,8 @@
         </div>
       `;
 
-      // 如果已經公開(open)或已配對,查一下有沒有相似結果
-      if (item.status === "open" || item.status === "matched") {
+      // 已公開(open)才需要查一下有沒有相似結果
+      if (item.status === "open") {
         const matchRes = await fetch(`${API_BASE}/items/${itemId}/matches`);
         const matchData = await matchRes.json();
         const matches = matchData.matches || [];
