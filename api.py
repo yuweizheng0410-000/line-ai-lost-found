@@ -28,6 +28,7 @@ model, _, preprocess = open_clip.create_model_and_transforms(
     "ViT-B-32", pretrained="openai"
 )
 model.eval().to(device)
+tokenizer = open_clip.get_tokenizer("ViT-B-32")  # 用於沒有照片時,把文字描述轉成 embedding
 
 # ---------- 連線 Supabase Storage(照片存這裡,不落地存本機) ----------
 supabase: Client = create_client(
@@ -45,6 +46,19 @@ def get_image_embedding_from_bytes(image_bytes: bytes) -> list[float]:
     image = preprocess(Image.open(BytesIO(image_bytes)).convert("RGB")).unsqueeze(0).to(device)
     with torch.no_grad():
         embedding = model.encode_image(image)
+        embedding /= embedding.norm(dim=-1, keepdim=True)
+    return embedding.squeeze().cpu().numpy().tolist()
+
+
+def get_text_embedding(text: str) -> list[float]:
+    """
+    沒有照片時,把分類+描述組成一句話,轉成跟圖像相同向量空間的 embedding。
+    CLIP 是圖文共享同一個向量空間的模型,所以這個向量可以直接跟其他物品的
+    圖像 embedding 做 cosine similarity 比對,不需要另外設計比對邏輯。
+    """
+    tokens = tokenizer([text]).to(device)
+    with torch.no_grad():
+        embedding = model.encode_text(tokens)
         embedding /= embedding.norm(dim=-1, keepdim=True)
     return embedding.squeeze().cpu().numpy().tolist()
 
@@ -72,26 +86,38 @@ def build_match_result(rows, source):
 
 # ---------- API 1:上傳物品(拾獲通報 or 遺失協尋)----------
 # 照片直接上傳到 Supabase Storage(雲端),不寫進本機硬碟。
+# 照片不是必填:如果沒有照片,改用「分類+描述」文字算出 embedding,
+# 因為 CLIP 圖文共享同一個向量空間,文字向量一樣能拿去跟其他物品的圖片比對。
 # 新提交的物品一律先進入「待審核」狀態,審核通過後才會出現在配對結果裡。
 @app.post("/items")
 async def create_item(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
     type: str = Form(...),        # "found" 或 "lost"
     category: str = Form(...),
     location: str = Form(...),
     description: str = Form(""),
 ):
-    file_bytes = await file.read()
-    embedding = get_image_embedding_from_bytes(file_bytes)
+    has_photo = file is not None and file.filename
 
-    ext = file.filename.split(".")[-1]
-    storage_filename = f"{uuid.uuid4()}.{ext}"
-    supabase.storage.from_(BUCKET_NAME).upload(
-        storage_filename,
-        file_bytes,
-        {"content-type": file.content_type},
-    )
-    public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(storage_filename)
+    if has_photo:
+        file_bytes = await file.read()
+        embedding = get_image_embedding_from_bytes(file_bytes)
+
+        ext = file.filename.split(".")[-1]
+        storage_filename = f"{uuid.uuid4()}.{ext}"
+        supabase.storage.from_(BUCKET_NAME).upload(
+            storage_filename,
+            file_bytes,
+            {"content-type": file.content_type},
+        )
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(storage_filename)
+    else:
+        # 沒有照片:組合分類+描述成一句話,算文字 embedding
+        text_for_embedding = f"{category} {description}".strip()
+        if not text_for_embedding:
+            text_for_embedding = category  # 至少會有分類,不會是空字串
+        embedding = get_text_embedding(text_for_embedding)
+        public_url = None  # 沒有照片,image_url 存 null
 
     conn = get_connection()
     cur = conn.cursor()
@@ -192,7 +218,7 @@ def update_status(item_id: str, status: str = Form(...)):
 
 # ---------- API 4:列出所有物品(給後台管理用,可用 status/type 篩選)----------
 @app.get("/items")
-def list_items(status: str = None, type: str = None):
+def list_items(status: str = None, type: str = None, category: str = None):
     conn = get_connection()
     cur = conn.cursor()
 
@@ -205,6 +231,9 @@ def list_items(status: str = None, type: str = None):
     if type:
         query += " AND type = %s"
         params.append(type)
+    if category:
+        query += " AND category = %s"
+        params.append(category)
 
     query += " ORDER BY created_at DESC"
 
