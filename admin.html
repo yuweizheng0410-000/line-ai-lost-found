@@ -74,7 +74,6 @@
   .tag.lost { background: #dd6b20; }
   .status-pending { color: #c53030; font-weight: bold; }
   .status-open { color: #2b6cb0; font-weight: bold; }
-  .status-matched { color: #d69e2e; font-weight: bold; }
   .status-closed { color: #718096; }
   .status-rejected { color: #a0aec0; text-decoration: line-through; }
   .approve-btn { background: #38a169; }
@@ -225,7 +224,6 @@
       <option value="pending">待審核</option>
       <option value="">全部</option>
       <option value="open">比對中</option>
-      <option value="matched">已配對</option>
       <option value="closed">已結案</option>
       <option value="rejected">已拒絕</option>
     </select>
@@ -330,7 +328,6 @@
     const statusLabel = {
       pending: "待審核",
       open: "比對中",
-      matched: "已配對",
       closed: "已結案",
       rejected: "已拒絕",
     }[item.status] || item.status;
@@ -342,7 +339,7 @@
         <button class="action-btn approve-btn" onclick="approveItem('${item.id}')">審核通過</button>
         <button class="action-btn reject-btn" onclick="rejectItem('${item.id}')">拒絕</button>
       `;
-    } else if (item.status === "open" || item.status === "matched") {
+    } else if (item.status === "open") {
       actionHtml = `
         <button class="action-btn detail-btn" onclick="showDetail('${item.id}')">查看詳情</button>
         <button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>
