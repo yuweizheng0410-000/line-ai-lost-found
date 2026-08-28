@@ -95,6 +95,100 @@
     font-size: 12px;
     margin-right: 4px;
   }
+  .detail-btn { background: #6b46c1; }
+  .detail-btn:hover { background: #553c9a; }
+
+  /* 詳情彈窗:顯示 AI 比對排序結果 */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: white;
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #718096;
+    padding: 0;
+  }
+  .source-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: #f7fafc;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  .source-item img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  .rank-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #edf2f7;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .rank-number {
+    font-size: 18px;
+    font-weight: bold;
+    color: #a0aec0;
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .rank-number.top1 { color: #d69e2e; }
+  .rank-item img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .rank-info { font-size: 13px; flex: 1; }
+  .similarity-bar-bg {
+    background: #edf2f7;
+    border-radius: 4px;
+    height: 6px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .similarity-bar-fill {
+    background: #2b6cb0;
+    height: 100%;
+  }
+  .similarity-text {
+    font-size: 12px;
+    color: #2b6cb0;
+    font-weight: bold;
+    margin-left: 8px;
+  }
   #loading { color: #888; margin: 16px 0; }
 </style>
 </head>
@@ -130,7 +224,7 @@
     <select id="filterStatus" onchange="loadItems()">
       <option value="pending">待審核</option>
       <option value="">全部</option>
-      <option value="open">待配對</option>
+      <option value="open">比對中</option>
       <option value="matched">已配對</option>
       <option value="closed">已結案</option>
       <option value="rejected">已拒絕</option>
@@ -235,7 +329,7 @@
     const typeClass = item.type === "found" ? "found" : "lost";
     const statusLabel = {
       pending: "待審核",
-      open: "待配對",
+      open: "比對中",
       matched: "已配對",
       closed: "已結案",
       rejected: "已拒絕",
@@ -249,7 +343,10 @@
         <button class="action-btn reject-btn" onclick="rejectItem('${item.id}')">拒絕</button>
       `;
     } else if (item.status === "open" || item.status === "matched") {
-      actionHtml = `<button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>`;
+      actionHtml = `
+        <button class="action-btn detail-btn" onclick="showDetail('${item.id}')">查看詳情</button>
+        <button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>
+      `;
     } else {
       actionHtml = `<span style="color:#aaa;">-</span>`;
     }
@@ -270,6 +367,72 @@
     if (!isoStr) return "-";
     const d = new Date(isoStr);
     return d.toLocaleString("zh-TW", { hour12: false });
+  }
+
+  // 查看詳情:呼叫既有的 matches API,顯示這筆物品的 AI 比對排序結果
+  async function showDetail(itemId) {
+    const modal = document.getElementById("detailModal");
+    const content = document.getElementById("detailContent");
+    modal.classList.add("show");
+    content.innerHTML = `<p style="color:#718096;font-size:13px;">載入中...</p>`;
+
+    try {
+      const sourceItem = itemsCache[itemId];
+
+      const res = await fetch(`${API_BASE}/items/${itemId}/matches`);
+      const data = await res.json();
+      const matches = data.matches || [];
+
+      let html = "";
+
+      // 上方顯示這筆物品本身(比對的來源)
+      if (sourceItem) {
+        const typeLabel = sourceItem.type === "found" ? "拾獲" : "遺失";
+        html += `
+          <div class="source-item">
+            ${sourceItem.image_url ? `<img src="${sourceItem.image_url}" onerror="this.style.display='none'">` : ""}
+            <div style="font-size:13px;">
+              <div><strong>${typeLabel}物品</strong> ・ ${sourceItem.category || "-"}</div>
+              <div style="color:#718096;margin-top:2px;">${sourceItem.location || "-"} ・ ${sourceItem.description || "無描述"}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (matches.length === 0) {
+        html += `<p style="color:#718096;font-size:13px;text-align:center;padding:16px 0;">目前 AI 尚未比對出任何相符物品</p>`;
+      } else {
+        html += `<p style="font-size:13px;font-weight:bold;margin-bottom:10px;">AI 比對排序(共 ${matches.length} 筆,依相似度排列)</p>`;
+        matches.forEach((m, index) => {
+          const rank = index + 1;
+          const similarityPercent = (m.similarity * 100).toFixed(1);
+          html += `
+            <div class="rank-item">
+              <div class="rank-number ${rank === 1 ? 'top1' : ''}">#${rank}</div>
+              ${m.image_url ? `<img src="${m.image_url}" onerror="this.style.display='none'">` : ""}
+              <div class="rank-info">
+                <div><strong>${m.category || "-"}</strong> ・ ${m.location || "-"}</div>
+                <div style="color:#718096;">${m.description || "無描述"}</div>
+                <div style="display:flex;align-items:center;">
+                  <div class="similarity-bar-bg" style="flex:1;">
+                    <div class="similarity-bar-fill" style="width:${similarityPercent}%;"></div>
+                  </div>
+                  <span class="similarity-text">${similarityPercent}%</span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      content.innerHTML = html;
+    } catch (err) {
+      content.innerHTML = `<p style="color:#c53030;font-size:13px;">載入失敗: ${err.message}</p>`;
+    }
+  }
+
+  function closeDetail() {
+    document.getElementById("detailModal").classList.remove("show");
   }
 
   async function approveItem(itemId) {
@@ -354,6 +517,16 @@
   // 頁面載入時自動抓一次資料
   loadItems();
 </script>
+
+<div class="modal-overlay" id="detailModal" onclick="if(event.target === this) closeDetail()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 style="margin:0;font-size:16px;">AI 比對詳情</h2>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detailContent">載入中...</div>
+  </div>
+</div>
 
 </body>
 </html>
