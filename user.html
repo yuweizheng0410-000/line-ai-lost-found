@@ -4,253 +4,139 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>校園失物招領</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
-    font-family: "Microsoft JhengHei", sans-serif;
+    font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
     background: #f0f4f8;
     margin: 0;
     padding: 16px;
     color: #222;
   }
-  .container {
-    max-width: 520px;
-    margin: 0 auto;
-  }
-  h1 {
-    font-size: 20px;
-    text-align: center;
-    margin-bottom: 4px;
-  }
+  .container { max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
   .subtitle {
-    text-align: center;
-    color: #718096;
-    font-size: 13px;
-    margin-bottom: 20px;
+    text-align: center; color: #718096; font-size: 13px; margin-bottom: 20px;
   }
   .tabs {
-    display: flex;
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    margin-bottom: 16px;
+    display: flex; background: white; border-radius: 10px;
+    overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px;
   }
   .tab {
-    flex: 1;
-    padding: 12px 6px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    color: #718096;
+    flex: 1; padding: 12px 6px; text-align: center; cursor: pointer;
+    font-size: 14px; font-weight: bold; color: #718096;
     border-bottom: 3px solid transparent;
+    text-decoration: none;
   }
-  .tab.active.found {
-    color: #2f855a;
-    border-bottom-color: #38a169;
-    background: #f0fff4;
-  }
-  .tab.active.lost {
-    color: #c05621;
-    border-bottom-color: #dd6b20;
-    background: #fffaf0;
-  }
-  .tab.active.browse {
-    color: #2b6cb0;
-    border-bottom-color: #3182ce;
-    background: #ebf8ff;
-  }
+  .tab.active.found { color: #2f855a; border-bottom-color: #38a169; background: #f0fff4; }
+  .tab.active.lost { color: #c05621; border-bottom-color: #dd6b20; background: #fffaf0; }
+  .tab.active.browse { color: #2b6cb0; border-bottom-color: #3182ce; background: #ebf8ff; }
   .card {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    margin-bottom: 16px;
+    background: white; border-radius: 10px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px;
   }
   label {
-    display: block;
-    font-size: 13px;
-    font-weight: bold;
-    color: #4a5568;
-    margin: 14px 0 6px;
+    display: block; font-size: 13px; font-weight: bold;
+    color: #4a5568; margin: 14px 0 6px;
   }
   label:first-child { margin-top: 0; }
   input[type="text"], select, textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #cbd5e0;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
+    width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0;
+    border-radius: 8px; font-size: 14px; font-family: inherit;
   }
   textarea { resize: vertical; min-height: 60px; }
   input[type="file"] {
-    width: 100%;
-    padding: 10px;
-    border: 1px dashed #cbd5e0;
-    border-radius: 8px;
-    background: #f7fafc;
-    font-size: 13px;
+    width: 100%; padding: 10px; border: 1px dashed #cbd5e0;
+    border-radius: 8px; background: #f7fafc; font-size: 13px;
   }
   #previewImg {
-    display: none;
-    width: 100%;
-    max-height: 220px;
-    object-fit: contain;
-    border-radius: 8px;
-    margin-top: 10px;
-    background: #f0f0f0;
+    display: none; width: 100%; max-height: 220px; object-fit: contain;
+    border-radius: 8px; margin-top: 10px; background: #f0f0f0;
   }
   .submit-btn {
-    width: 100%;
-    padding: 14px;
-    margin-top: 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
+    width: 100%; padding: 14px; margin-top: 20px; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: bold; color: white; cursor: pointer;
   }
   .submit-btn.found { background: #38a169; }
   .submit-btn.found:hover { background: #2f855a; }
   .submit-btn.lost { background: #dd6b20; }
   .submit-btn.lost:hover { background: #c05621; }
   .submit-btn:disabled { background: #cbd5e0; cursor: not-allowed; }
-
   .result-box {
-    display: none;
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    margin-bottom: 16px;
+    display: none; background: white; border-radius: 10px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px;
   }
   .result-box.success { border-left: 4px solid #38a169; }
   .result-box.error { border-left: 4px solid #c53030; }
   .result-id {
-    background: #f7fafc;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 12px;
-    word-break: break-all;
-    margin: 8px 0;
-    color: #4a5568;
+    background: #f7fafc; padding: 8px 12px; border-radius: 6px;
+    font-family: ui-monospace, monospace; font-size: 12px;
+    word-break: break-all; margin: 8px 0; color: #4a5568;
   }
-
-  /* 配對結果與公開招領清單共用的卡片樣式 */
   .item-card {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid #edf2f7;
-    border-radius: 8px;
-    margin-top: 10px;
-    background: #fff;
+    display: flex; gap: 12px; padding: 12px; border: 1px solid #edf2f7;
+    border-radius: 8px; margin-top: 10px; background: #fff;
   }
   .item-card img {
-    width: 72px;
-    height: 72px;
-    object-fit: cover;
-    border-radius: 6px;
-    flex-shrink: 0;
-    background: #edf2f7;
+    width: 72px; height: 72px; object-fit: cover; border-radius: 6px;
+    flex-shrink: 0; background: #edf2f7;
   }
   .item-info { font-size: 13px; line-height: 1.5; flex: 1; }
   .match-similarity {
-    display: inline-block;
-    background: #ebf8ff;
-    color: #2b6cb0;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: bold;
-    margin-top: 4px;
+    display: inline-block; background: #ebf8ff; color: #2b6cb0;
+    padding: 2px 8px; border-radius: 10px; font-size: 12px;
+    font-weight: bold; margin-top: 4px;
   }
-
   .type-tag {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 11px;
-    color: white;
-    font-weight: bold;
+    display: inline-block; padding: 2px 6px; border-radius: 4px;
+    font-size: 11px; color: white; font-weight: bold;
   }
   .type-tag.found { background: #38a169; }
   .type-tag.lost { background: #dd6b20; }
-
   .lookup-section {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    margin-top: 24px;
+    background: white; border-radius: 10px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-top: 24px;
   }
-  .lookup-section h2 {
-    font-size: 15px;
-    margin: 0 0 12px;
-  }
-  .lookup-row {
-    display: flex;
-    gap: 8px;
-  }
-  .lookup-row input {
-    flex: 1;
-  }
+  .lookup-section h2 { font-size: 15px; margin: 0 0 12px; }
+  .lookup-row { display: flex; gap: 8px; }
+  .lookup-row input { flex: 1; }
   .lookup-row button {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    background: #4a5568;
-    color: white;
-    font-size: 13px;
-    cursor: pointer;
+    padding: 10px 16px; border: none; border-radius: 8px;
+    background: #4a5568; color: white; font-size: 13px; cursor: pointer;
     white-space: nowrap;
   }
   .status-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: bold;
-    margin-left: 6px;
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 12px; font-weight: bold; margin-left: 6px;
   }
   .status-pending { background: #fed7d7; color: #c53030; }
   .status-open { background: #bee3f8; color: #2b6cb0; }
   .status-closed { background: #e2e8f0; color: #718096; }
   .status-rejected { background: #e2e8f0; color: #a0aec0; }
-
-  .filter-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .filter-row select {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-row select { padding: 6px 10px; font-size: 13px; }
   #loadingSpinner { text-align: center; color: #718096; font-size: 13px; padding: 12px; display: none; }
+  .hint { color: #718096; font-size: 13px; }
+  .err { color: #c53030; font-size: 13px; }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>校園失物招領</h1>
-  <p class="subtitle">用 AI 圖像比對,幫你更快找回遺失物</p>
+  <p class="subtitle">用 AI 圖像比對，幫你更快找回遺失物</p>
 
   <div class="tabs">
-    <div class="tab active found" id="tabFound" onclick="switchTab('found')">📦 我撿到東西</div>
-    <div class="tab lost" id="tabLost" onclick="switchTab('lost')">🔍 我遺失東西</div>
-    <div class="tab browse" id="tabBrowse" onclick="switchTab('browse')">📋 瀏覽招領清單</div>
+    <a class="tab active found" id="tabFound" href="/pick">我撿到東西</a>
+    <a class="tab lost" id="tabLost" href="/lost">我遺失東西</a>
+    <a class="tab browse" id="tabBrowse" href="/browse">瀏覽招領清單</a>
   </div>
 
   <div class="card" id="formCard">
     <form id="itemForm">
-      <label>物品照片(沒有照片也可以送出,系統會改用文字描述比對)</label>
-      <input type="file" id="photoInput" accept="image/*">
+      <label>物品照片（沒有照片也可以送出，系統會改用文字描述比對）</label>
+      <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp,image/gif">
       <img id="previewImg" alt="預覽">
 
       <label>物品分類</label>
@@ -264,12 +150,18 @@
         <option value="鑰匙">鑰匙</option>
         <option value="其他">其他</option>
       </select>
-
+      <label>聯絡學號</label>
+      <input type="text" id="studentIdInput" placeholder="請輸入學號，以便後續聯繫" required maxlength="20">
       <label id="locationLabel">拾獲地點</label>
-      <input type="text" id="locationInput" placeholder="例如:圖書館三樓、宿舍交誼廳" required>
+      <input type="text" id="locationInput" placeholder="例如：圖書館三樓、宿舍交誼廳" required maxlength="200">
+      
+      <div id="custodianGroup">
+        <label>領取地點 / 目前保管處</label>
+        <input type="text" id="custodianInput" placeholder="例如：學務處生輔組、圖書館櫃台" maxlength="100">
+      </div>
 
-      <label>物品描述(顏色、品牌、特徵等)</label>
-      <textarea id="descriptionInput" placeholder="例如:黑色水壺,有一個小熊貼紙"></textarea>
+      <label>物品描述（顏色、品牌、特徵等）</label>
+      <textarea id="descriptionInput" placeholder="例如：黑色水壺，有一個小熊貼紙" maxlength="1000"></textarea>
 
       <button type="submit" class="submit-btn found" id="submitBtn">送出拾獲通報</button>
     </form>
@@ -293,30 +185,73 @@
         <option value="其他">其他</option>
       </select>
     </div>
-    <div id="publicItemsList">載入中...</div>
+    <div id="publicItemsList" class="hint">載入中…</div>
   </div>
 
-  <div id="loadingSpinner">處理中,請稍候...</div>
-
+  <div id="loadingSpinner">處理中，請稍候…</div>
   <div class="result-box" id="resultBox"></div>
 
   <div class="lookup-section" id="lookupSection">
-    <h2>🔎 查詢我的通報狀態 / 配對結果</h2>
+    <h2>查詢我的通報狀態 / 配對結果</h2>
     <div class="lookup-row">
       <input type="text" id="lookupIdInput" placeholder="貼上你通報時拿到的編號">
-      <button onclick="lookupItem()">查詢</button>
+      <button type="button" onclick="lookupItem()">查詢</button>
     </div>
     <div id="lookupResult"></div>
   </div>
+  
 </div>
 
-<script>
-  // 如果你的 API 不是跑在本機 8000 埠,改這裡(之後部署到雲端也是改這行)
-  const API_BASE = "http://127.0.0.1:8000";
+<script >
+  // 與 API 同源時留空
+  const API_BASE = "";
+  const PATH_TO_TAB = { "/pick": "found", "/lost": "lost", "/browse": "browse" };
+  const TAB_TO_PATH = { found: "/pick", lost: "/lost", browse: "/browse" };
+  let currentType = "found";
 
-  let currentType = "found"; // found, lost, browse
+// 👉 新增這段：宣告變數並初始化 LIFF
+  let currentLineUserId = "";
+  
+  async function initLIFF() {
+    try {
+      // ⚠️ 務必替換為你在 LINE Developers 後台建立的真實 LIFF ID
+      await liff.init({ liffId: "2011712057-gfmn21Y3" }); 
+      
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        currentLineUserId = profile.userId;
+      } else {
+        liff.login(); // 若未登入則自動導向 LINE 登入畫面
+      }
+    } catch (err) {
+      console.error("LIFF 初始化失敗：", err);
+    }
+  }
+  initLIFF();
 
-  function switchTab(type) {
+  function safeUrl(url) {
+    if (!url || typeof url !== "string") return "";
+    try {
+      const u = new URL(url, window.location.origin);
+      if (u.protocol === "http:" || u.protocol === "https:") return u.href;
+    } catch (_) {}
+    return "";
+  }
+
+  function parseError(data, fallback) {
+    if (!data) return fallback;
+    const d = data.detail ?? data.error ?? data.message;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d)) return d.map(x => x.msg || JSON.stringify(x)).join("; ");
+    return fallback;
+  }
+
+  function pathToType() {
+    const path = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    return PATH_TO_TAB[path] || "found";
+  }
+
+  function switchTab(type, updateUrl) {
     currentType = type;
     document.getElementById("tabFound").classList.toggle("active", type === "found");
     document.getElementById("tabLost").classList.toggle("active", type === "lost");
@@ -326,10 +261,14 @@
     const browseCard = document.getElementById("browseCard");
     const submitBtn = document.getElementById("submitBtn");
     const locationLabel = document.getElementById("locationLabel");
+    const title = document.querySelector("h1");
+    const subtitle = document.querySelector(".subtitle");
 
     if (type === "browse") {
       formCard.style.display = "none";
       browseCard.style.display = "block";
+      if (title) title.textContent = "瀏覽招領清單";
+      if (subtitle) subtitle.textContent = "查看已公開的拾獲與遺失通報";
       loadPublicItems();
     } else {
       formCard.style.display = "block";
@@ -338,17 +277,45 @@
         submitBtn.textContent = "送出拾獲通報";
         submitBtn.className = "submit-btn found";
         locationLabel.textContent = "拾獲地點";
+        if (title) title.textContent = "我撿到東西";
+        if (subtitle) subtitle.textContent = "通報拾獲物品，學校審核後公開比對";
       } else {
         submitBtn.textContent = "送出協尋申請";
         submitBtn.className = "submit-btn lost";
         locationLabel.textContent = "遺失地點";
+        if (title) title.textContent = "我遺失東西";
+        if (subtitle) subtitle.textContent = "通報遺失物品，用 AI 協助找相似拾獲物";
+      }
+      const custGroup = document.getElementById("custodianGroup");
+if (custGroup) custGroup.style.display = type === "found" ? "block" : "none";
+    }
+    document.getElementById("resultBox").style.display = "none";
+
+    if (updateUrl) {
+      const next = TAB_TO_PATH[type] || "/pick";
+      if (location.pathname !== next) {
+        history.pushState({ type }, "", next);
       }
     }
-
-    document.getElementById("resultBox").style.display = "none";
   }
 
-  // 照片預覽
+  // 依網址決定初始分頁：/pick /lost /browse
+  switchTab(pathToType(), false);
+  window.addEventListener("popstate", () => switchTab(pathToType(), false));
+
+  document.getElementById("tabFound").addEventListener("click", function (e) {
+    e.preventDefault();
+    switchTab("found", true);
+  });
+  document.getElementById("tabLost").addEventListener("click", function (e) {
+    e.preventDefault();
+    switchTab("lost", true);
+  });
+  document.getElementById("tabBrowse").addEventListener("click", function (e) {
+    e.preventDefault();
+    switchTab("browse", true);
+  });
+
   document.getElementById("photoInput").addEventListener("change", function (e) {
     const file = e.target.files[0];
     const img = document.getElementById("previewImg");
@@ -360,7 +327,6 @@
     }
   });
 
-  // 提交表單
   document.getElementById("itemForm").addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -369,10 +335,8 @@
     const location = document.getElementById("locationInput").value;
     const description = document.getElementById("descriptionInput").value;
 
-    // 沒有照片時,提醒使用者盡量補充文字描述,幫助 AI 比對準確度(但不強制擋下提交)
     if (!photoFile && !description.trim()) {
-      const proceed = confirm("沒有照片也沒有描述,AI 比對的準確度會比較低。仍要送出嗎?");
-      if (!proceed) return;
+      if (!confirm("沒有照片也沒有描述，AI 比對準確度會較低。仍要送出嗎？")) return;
     }
 
     const submitBtn = document.getElementById("submitBtn");
@@ -381,170 +345,340 @@
     document.getElementById("resultBox").style.display = "none";
 
     const formData = new FormData();
-    if (photoFile) formData.append("file", photoFile);  // 沒有照片就不附加這個欄位,後端會改用文字比對
+    const studentId = document.getElementById("studentIdInput").value;
+    if (photoFile) formData.append("file", photoFile);
     formData.append("type", currentType);
     formData.append("category", category);
     formData.append("location", location);
     formData.append("description", description);
+    formData.append("student_id", studentId);
+    formData.append("custodian", document.getElementById("custodianInput").value);
+
+    // 👉 新增這段：如果有成功抓到 ID，就跟著表單一起送給後端
+    if (currentLineUserId) {
+      formData.append("line_user_id", currentLineUserId);
+    }
 
     try {
-      const res = await fetch(`${API_BASE}/items`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "提交失敗");
+      const res = await fetch(`${API_BASE}/items`, { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(parseError(data, "提交失敗"));
 
-      showResult(true, `
-        <strong>✅ 提交成功!</strong>
-        <p style="margin:8px 0;font-size:13px;color:#4a5568;">你的通報已送出,將由校方審核後正式公開比對,請保留以下編號以便查詢狀態:</p>
-        <div class="result-id">${data.id}</div>
-        <button onclick="copyId('${data.id}')" style="margin-top:6px;padding:6px 12px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;font-size:12px;">複製編號</button>
-      `);
+      const box = document.getElementById("resultBox");
+      box.className = "result-box success";
+      box.replaceChildren();
 
-      // 清空表單
+      const title = document.createElement("strong");
+      title.textContent = "提交成功！";
+      const tip = document.createElement("p");
+      tip.style.cssText = "margin:8px 0;font-size:13px;color:#4a5568;";
+      tip.textContent = "你的通報已送出，將由校方審核後正式公開比對，請保留以下編號以便查詢狀態：";
+      const idBox = document.createElement("div");
+      idBox.className = "result-id";
+      idBox.textContent = data.id;
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.textContent = "複製編號";
+      copyBtn.style.cssText = "margin-top:6px;padding:6px 12px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;font-size:12px;";
+      copyBtn.addEventListener("click", () => copyId(data.id));
+
+      box.appendChild(title);
+      box.appendChild(tip);
+      box.appendChild(idBox);
+      box.appendChild(copyBtn);
+      box.style.display = "block";
+
       document.getElementById("itemForm").reset();
       document.getElementById("previewImg").style.display = "none";
-
-      // 自動帶入查詢欄位,方便馬上查看狀態
       document.getElementById("lookupIdInput").value = data.id;
-
     } catch (err) {
-      showResult(false, `<strong>❌ 提交失敗</strong><p style="font-size:13px;color:#c53030;">${err.message}</p>`);
+      const box = document.getElementById("resultBox");
+      box.className = "result-box error";
+      box.replaceChildren();
+      const title = document.createElement("strong");
+      title.textContent = "提交失敗";
+      const p = document.createElement("p");
+      p.className = "err";
+      p.textContent = err.message;
+      box.appendChild(title);
+      box.appendChild(p);
+      box.style.display = "block";
     } finally {
       submitBtn.disabled = false;
       document.getElementById("loadingSpinner").style.display = "none";
     }
   });
 
-  function showResult(success, html) {
-    const box = document.getElementById("resultBox");
-    box.className = "result-box " + (success ? "success" : "error");
-    box.innerHTML = html;
-    box.style.display = "block";
-  }
-
   function copyId(id) {
     navigator.clipboard.writeText(id).then(() => alert("編號已複製"));
   }
 
-  // ---------- 載入公開招領/協尋清單(瀏覽分頁用)----------
+  function appendItemCard(parent, item, extraNode) {
+    const card = document.createElement("div");
+    card.className = "item-card";
+
+    const imgUrl = safeUrl(item.image_url);
+    if (imgUrl) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = "";
+      img.onerror = () => { img.style.display = "none"; };
+      card.appendChild(img);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.style.cssText = "width:72px;height:72px;background:#eee;border-radius:6px;";
+      card.appendChild(placeholder);
+    }
+
+    const info = document.createElement("div");
+    info.className = "item-info";
+
+    const line1 = document.createElement("div");
+    if (item.type) {
+      const tag = document.createElement("span");
+      tag.className = "type-tag " + (item.type === "found" ? "found" : "lost");
+      tag.textContent = item.type === "found" ? "拾獲" : "遺失";
+      line1.appendChild(tag);
+      line1.appendChild(document.createTextNode(" "));
+    }
+    const strong = document.createElement("strong");
+    strong.textContent = item.category || "未分類";
+    line1.appendChild(strong);
+
+    const line2 = document.createElement("div");
+    line2.style.cssText = "color:#4a5568;margin-top:2px;";
+    line2.textContent = item.location || "地點未填寫";
+
+    const line3 = document.createElement("div");
+    line3.style.cssText = "color:#718096;font-size:12px;margin-top:2px;";
+    line3.textContent = item.description || "無詳細描述";
+
+    info.appendChild(line1);
+    info.appendChild(line2);
+    info.appendChild(line3);
+    if (extraNode) info.appendChild(extraNode);
+    card.appendChild(info);
+    parent.appendChild(card);
+  }
+
   async function loadPublicItems() {
     const listEl = document.getElementById("publicItemsList");
-    listEl.innerHTML = `<p style="color:#718096;font-size:13px;">載入中...</p>`;
+    listEl.replaceChildren();
+    const loading = document.createElement("p");
+    loading.className = "hint";
+    loading.textContent = "載入中…";
+    listEl.appendChild(loading);
 
     const type = document.getElementById("browseType").value;
     const category = document.getElementById("browseCategory").value;
-
     const params = new URLSearchParams();
     if (type) params.append("type", type);
     if (category) params.append("category", category);
 
     try {
-      const res = await fetch(`${API_BASE}/items?${params.toString()}`);
-      const data = await res.json();
-      // 使用者端瀏覽介面僅展示「已公開(open)」的物品,
-      // 待審核(pending)、已拒絕(rejected)、已結案(closed)不應該讓一般使用者看到
-      const publicItems = (data.items || []).filter(i => i.status === "open");
+      const res = await fetch(`${API_BASE}/items?${params}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(parseError(data, "載入失敗"));
+
+      const publicItems = data.items || [];
+      listEl.replaceChildren();
 
       if (publicItems.length === 0) {
-        listEl.innerHTML = `<p style="color:#718096;font-size:13px;text-align:center;padding:20px 0;">目前沒有公開的物品紀錄</p>`;
+        const p = document.createElement("p");
+        p.className = "hint";
+        p.style.cssText = "text-align:center;padding:20px 0;";
+        p.textContent = "目前沒有公開的物品紀錄";
+        listEl.appendChild(p);
         return;
       }
 
-      let html = "";
-      for (const item of publicItems) {
-        const typeTag = item.type === "found"
-          ? `<span class="type-tag found">拾獲</span>`
-          : `<span class="type-tag lost">遺失</span>`;
-
-        html += `
-          <div class="item-card">
-            ${item.image_url ? `<img src="${item.image_url}" onerror="this.style.display='none'">` : `<div style="width:72px;height:72px;background:#eee;border-radius:6px;"></div>`}
-            <div class="item-info">
-              <div>${typeTag} <strong>${item.category || "未分類"}</strong></div>
-              <div style="color:#4a5568;margin-top:2px;">📍 ${item.location || "地點未填寫"}</div>
-              <div style="color:#718096;font-size:12px;margin-top:2px;">${item.description || "無詳細描述"}</div>
-            </div>
-          </div>
-        `;
-      }
-      listEl.innerHTML = html;
+      for (const item of publicItems) appendItemCard(listEl, item);
     } catch (err) {
-      listEl.innerHTML = `<p style="color:#c53030;font-size:13px;">載入失敗: ${err.message}</p>`;
+      listEl.replaceChildren();
+      const p = document.createElement("p");
+      p.className = "err";
+      p.textContent = "載入失敗：" + err.message;
+      listEl.appendChild(p);
     }
   }
 
-  // ---------- 查詢功能:輸入編號查看審核狀態與配對結果 ----------
   async function lookupItem() {
     const itemId = document.getElementById("lookupIdInput").value.trim();
     const resultEl = document.getElementById("lookupResult");
+    resultEl.replaceChildren();
 
     if (!itemId) {
-      resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">請輸入編號</p>`;
+      const p = document.createElement("p");
+      p.className = "err";
+      p.textContent = "請輸入編號";
+      resultEl.appendChild(p);
       return;
     }
 
-    resultEl.innerHTML = `<p style="color:#718096;font-size:13px;">查詢中...</p>`;
+    const loading = document.createElement("p");
+    loading.className = "hint";
+    loading.textContent = "查詢中…";
+    resultEl.appendChild(loading);
 
     try {
-      // 先查所有物品清單,從中找到這筆(因為目前沒有單筆查詢 API,用清單比對)
-      const listRes = await fetch(`${API_BASE}/items`);
-      const listData = await listRes.json();
-      const item = (listData.items || []).find(i => i.id === itemId);
+      const res = await fetch(`${API_BASE}/items/${encodeURIComponent(itemId)}`);
+      const item = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(parseError(item, "找不到這個編號"));
 
-      if (!item) {
-        resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">找不到這個編號,請確認輸入正確</p>`;
-        return;
+      resultEl.replaceChildren();
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "margin-top:10px;font-size:13px;";
+
+      const title = document.createElement("strong");
+      title.textContent = item.type === "found" ? "拾獲通報" : "協尋申請";
+      const badge = document.createElement("span");
+      const statusLabel = {
+        pending: "審核中", open: "已公開比對中", closed: "已結案", rejected: "審核未通過",
+      }[item.status] || item.status;
+      badge.className = "status-badge status-" + (item.status || "");
+      badge.textContent = statusLabel;
+
+      const meta = document.createElement("p");
+      meta.style.cssText = "color:#718096;margin:6px 0;";
+      meta.textContent = `${item.category || "-"} ・ ${item.location || "-"}`;
+
+      wrap.appendChild(title);
+      wrap.appendChild(badge);
+      wrap.appendChild(meta);
+      // 顯示保管處資訊
+  if (item.type === "found" && item.custodian && item.custodian !== "未提供") {
+    const custInfo = document.createElement("p");
+    custInfo.style.cssText = "color:#2f855a; font-weight:bold; margin:6px 0;";
+    custInfo.textContent = `📍 領取地點：${item.custodian}`;
+    wrap.appendChild(custInfo);
+  }
+
+  // 如果狀態是比對中 (open)，產生結案按鈕
+  // 顯示保管處資訊
+      if (item.type === "found" && item.custodian && item.custodian !== "未提供") {
+        const custInfo = document.createElement("p");
+        custInfo.style.cssText = "color:#2f855a; font-weight:bold; margin:6px 0;";
+        custInfo.textContent = `📍 領取地點：${item.custodian}`;
+        wrap.appendChild(custInfo);
       }
 
-      const statusLabel = {
-        pending: "審核中",
-        open: "已公開比對中",
-        closed: "已結案",
-        rejected: "審核未通過",
-      }[item.status] || item.status;
-
-      let html = `
-        <div style="margin-top:10px;font-size:13px;">
-          <strong>${item.type === "found" ? "拾獲通報" : "協尋申請"}</strong>
-          <span class="status-badge status-${item.status}">${statusLabel}</span>
-          <p style="color:#718096;margin:6px 0;">${item.category} ・ ${item.location}</p>
-        </div>
-      `;
-
-      // 已公開(open)才需要查一下有沒有相似結果
+      // 👉 修改原本的主按鈕，變成「單方結案」
       if (item.status === "open") {
-        const matchRes = await fetch(`${API_BASE}/items/${itemId}/matches`);
-        const matchData = await matchRes.json();
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "自行找回 / 取消通報 (單方結案)";
+        closeBtn.style.cssText = "margin-top:12px; padding:10px; width:100%; background:#718096; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer;";
+        closeBtn.onclick = async () => {
+          if (!confirm("確定要取消或標記這筆通報為結案嗎？")) return;
+          try {
+            const closeRes = await fetch(`${API_BASE}/items/${item.id}/close`, { method: "POST" });
+            if (!closeRes.ok) throw new Error("結案失敗");
+            alert("已成功結案！");
+            lookupItem(); 
+          } catch (e) {
+            alert(e.message);
+          }
+        };
+        wrap.appendChild(closeBtn);
+      } 
+
+      // 將資料塞進網頁
+      resultEl.appendChild(wrap);
+
+      // 執行 AI 相似度配對查詢
+      if (item.status === "open") {
+        const matchRes = await fetch(`${API_BASE}/items/${encodeURIComponent(itemId)}/matches`);
+        const matchData = await matchRes.json().catch(() => ({}));
+        if (!matchRes.ok) throw new Error(parseError(matchData, "配對查詢失敗"));
         const matches = matchData.matches || [];
 
         if (matches.length > 0) {
-          html += `<p style="font-size:13px;font-weight:bold;margin-top:12px;">🎯 系統為您比對出 ${matches.length} 筆可能相符的物品:</p>`;
+          const h = document.createElement("p");
+          h.style.cssText = "font-size:13px;font-weight:bold;margin-top:12px;";
+          h.textContent = `系統為您比對出 ${matches.length} 筆可能相符的物品：`;
+          resultEl.appendChild(h);
 
           for (const m of matches) {
-            const similarityPercent = (m.similarity * 100).toFixed(1);
-            html += `
-              <div class="item-card">
-                ${m.image_url ? `<img src="${m.image_url}" onerror="this.style.display='none'">` : ""}
-                <div class="item-info">
-                  <div><strong>${m.category}</strong> ・ 📍 ${m.location}</div>
-                  <div style="color:#718096;margin:2px 0;">${m.description || "無描述"}</div>
-                  <span class="match-similarity">相似度 ${similarityPercent}%</span>
-                </div>
-              </div>
-            `;
+            // 👉 在每張配對卡片中，加入「雙方結案」的專屬按鈕
+            const actionWrap = document.createElement("div");
+            actionWrap.style.cssText = "margin-top: 6px; display: flex; align-items: center; gap: 8px;";
+            
+            const sim = document.createElement("span");
+            sim.className = "match-similarity";
+            sim.textContent = `相似度 ${(m.similarity * 100).toFixed(1)}%`;
+            actionWrap.appendChild(sim);
+
+            const matchCloseBtn = document.createElement("button");
+            matchCloseBtn.textContent = "✅ 就是這個！(一起結案)";
+            matchCloseBtn.style.cssText = "padding:4px 8px; background:#38a169; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;";
+            matchCloseBtn.onclick = async () => {
+              if (!confirm("確定是這個物品嗎？按下確定後，系統將自動把雙方的通報都標記為已結案。")) return;
+              try {
+                // 將對方(拾獲者)的 ID 一併用 FormData 傳給後端
+                const fd = new FormData();
+                fd.append("matched_item_id", m.id);
+                
+                const closeRes = await fetch(`${API_BASE}/items/${item.id}/close`, { method: "POST", body: fd });
+                if (!closeRes.ok) throw new Error("結案失敗");
+                
+                alert("太棒了！已將雙方通報成功結案！");
+                lookupItem(); 
+              } catch (e) {
+                alert(e.message);
+              }
+            };
+            actionWrap.appendChild(matchCloseBtn);
+
+            appendItemCard(resultEl, m, actionWrap);
           }
         } else {
-          html += `<p style="font-size:13px;color:#718096;margin-top:8px;">目前尚未找到相似的物品,系統會持續自動比對新上傳的資料。</p>`;
+          const p = document.createElement("p");
+          p.className = "hint";
+          p.style.marginTop = "8px";
+          p.textContent = "目前尚未找到相似的物品，系統會持續自動比對新上傳的資料。";
+          resultEl.appendChild(p);
+        }
+      }
+    // ... 下面接著原本的 matchRes 配對查詢 ...
+      resultEl.appendChild(wrap);
+
+      if (item.status === "open") {
+        const matchRes = await fetch(`${API_BASE}/items/${encodeURIComponent(itemId)}/matches`);
+        const matchData = await matchRes.json().catch(() => ({}));
+        if (!matchRes.ok) throw new Error(parseError(matchData, "配對查詢失敗"));
+        const matches = matchData.matches || [];
+
+        if (matches.length > 0) {
+          const h = document.createElement("p");
+          h.style.cssText = "font-size:13px;font-weight:bold;margin-top:12px;";
+          h.textContent = `系統為您比對出 ${matches.length} 筆可能相符的物品：`;
+          resultEl.appendChild(h);
+
+          for (const m of matches) {
+            const sim = document.createElement("span");
+            sim.className = "match-similarity";
+            sim.textContent = `相似度 ${(m.similarity * 100).toFixed(1)}%`;
+            appendItemCard(resultEl, m, sim);
+          }
+        } else {
+          const p = document.createElement("p");
+          p.className = "hint";
+          p.style.marginTop = "8px";
+          p.textContent = "目前尚未找到相似的物品，系統會持續自動比對新上傳的資料。";
+          resultEl.appendChild(p);
         }
       } else if (item.status === "pending") {
-        html += `<p style="font-size:13px;color:#718096;margin-top:8px;">管理者審核通過後,系統將會為您進行 AI 圖像配對。</p>`;
+        const p = document.createElement("p");
+        p.className = "hint";
+        p.style.marginTop = "8px";
+        p.textContent = "管理者審核通過後，系統將會為您進行 AI 圖像配對。";
+        resultEl.appendChild(p);
       }
-
-      resultEl.innerHTML = html;
     } catch (err) {
-      resultEl.innerHTML = `<p style="color:#c53030;font-size:13px;">查詢失敗: ${err.message}</p>`;
+      resultEl.replaceChildren();
+      const p = document.createElement("p");
+      p.className = "err";
+      p.textContent = "查詢失敗：" + err.message;
+      resultEl.appendChild(p);
     }
   }
 </script>

@@ -2,18 +2,29 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>校園失物招領 - 後台管理</title>
 <style>
   body {
-    font-family: "Microsoft JhengHei", sans-serif;
+    font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
     background: #f5f5f5;
     margin: 0;
     padding: 24px;
     color: #222;
   }
-  h1 {
-    margin-bottom: 4px;
+  h1 { margin-bottom: 4px; }
+  .auth-bar {
+    background: #edf2f7;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 12px 0 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
   }
+  .auth-bar input { flex: 1; min-width: 200px; }
   .toolbar {
     margin: 16px 0;
     display: flex;
@@ -21,24 +32,20 @@
     align-items: center;
     flex-wrap: wrap;
   }
-  select, input[type="text"], button {
+  select, input[type="text"], input[type="password"], button {
     padding: 8px 12px;
     font-size: 14px;
     border-radius: 6px;
     border: 1px solid #ccc;
   }
-  input[type="text"] {
-    width: 200px;
-  }
+  input[type="text"] { width: 200px; }
   button {
     background: #2b6cb0;
     color: white;
     border: none;
     cursor: pointer;
   }
-  button:hover {
-    background: #1e4e8c;
-  }
+  button:hover { background: #1e4e8c; }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -52,16 +59,12 @@
     text-align: left;
     border-bottom: 1px solid #eee;
     font-size: 14px;
+    vertical-align: middle;
   }
-  th {
-    background: #2b6cb0;
-    color: white;
-  }
+  th { background: #2b6cb0; color: white; }
   img.thumb {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 4px;
+    width: 48px; height: 48px;
+    object-fit: cover; border-radius: 4px;
   }
   .tag {
     display: inline-block;
@@ -89,19 +92,13 @@
     font-size: 12px;
     margin-left: 8px;
   }
-  .action-btn {
-    padding: 4px 8px;
-    font-size: 12px;
-    margin-right: 4px;
-  }
+  .action-btn { padding: 4px 8px; font-size: 12px; margin-right: 4px; }
   .detail-btn { background: #6b46c1; }
   .detail-btn:hover { background: #553c9a; }
-
-  /* 詳情彈窗:顯示 AI 比對排序結果 */
   .modal-overlay {
     display: none;
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 100;
     align-items: center;
@@ -124,81 +121,52 @@
     margin-bottom: 16px;
   }
   .modal-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #718096;
-    padding: 0;
+    background: none; border: none; font-size: 20px;
+    cursor: pointer; color: #718096; padding: 0;
   }
-  .source-item {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    background: #f7fafc;
-    border-radius: 8px;
-    margin-bottom: 16px;
+  .source-item, .rank-item {
+    display: flex; gap: 12px; padding: 12px;
+    border-radius: 8px; margin-bottom: 10px; align-items: center;
   }
-  .source-item img {
-    width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border-radius: 6px;
-  }
-  .rank-item {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid #edf2f7;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    align-items: center;
+  .source-item { background: #f7fafc; margin-bottom: 16px; }
+  .rank-item { border: 1px solid #edf2f7; }
+  .source-item img, .rank-item img {
+    width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0;
   }
   .rank-number {
-    font-size: 18px;
-    font-weight: bold;
-    color: #a0aec0;
-    width: 28px;
-    text-align: center;
-    flex-shrink: 0;
+    font-size: 18px; font-weight: bold; color: #a0aec0;
+    width: 28px; text-align: center; flex-shrink: 0;
   }
   .rank-number.top1 { color: #d69e2e; }
-  .rank-item img {
-    width: 56px;
-    height: 56px;
-    object-fit: cover;
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
   .rank-info { font-size: 13px; flex: 1; }
   .similarity-bar-bg {
-    background: #edf2f7;
-    border-radius: 4px;
-    height: 6px;
-    margin-top: 6px;
-    overflow: hidden;
+    background: #edf2f7; border-radius: 4px; height: 6px;
+    margin-top: 6px; overflow: hidden; flex: 1;
   }
-  .similarity-bar-fill {
-    background: #2b6cb0;
-    height: 100%;
-  }
+  .similarity-bar-fill { background: #2b6cb0; height: 100%; }
   .similarity-text {
-    font-size: 12px;
-    color: #2b6cb0;
-    font-weight: bold;
-    margin-left: 8px;
+    font-size: 12px; color: #2b6cb0; font-weight: bold; margin-left: 8px;
   }
   #loading { color: #888; margin: 16px 0; }
+  .muted { color: #aaa; }
 </style>
 </head>
 <body>
 
 <h1>校園失物招領 - 後台管理 <span id="pendingBadge"></span></h1>
-<p id="loading">載入中...</p>
+
+<div class="auth-bar">
+  <label for="adminKeyInput">管理金鑰</label>
+  <input type="password" id="adminKeyInput" placeholder="對應 .env 的 ADMIN_API_KEY" autocomplete="off">
+  <button type="button" onclick="saveAdminKey()">儲存並載入</button>
+  <button type="button" onclick="clearAdminKey()" style="background:#718096;">清除</button>
+</div>
+
+<p id="loading">請先設定管理金鑰…</p>
 
 <div class="toolbar">
   <label>關鍵字:
-    <input type="text" id="searchInput" placeholder="搜尋地點或描述..." oninput="filterLocalItems()">
+    <input type="text" id="searchInput" placeholder="搜尋地點或描述…" oninput="filterLocalItems()">
   </label>
   <label>類型:
     <select id="filterType" onchange="loadItems()">
@@ -228,7 +196,7 @@
       <option value="rejected">已拒絕</option>
     </select>
   </label>
-  <button onclick="loadItems()">重新整理</button>
+  <button type="button" onclick="loadItems()">重新整理</button>
 </div>
 
 <table id="itemsTable" style="display:none;">
@@ -239,6 +207,9 @@
       <th>分類</th>
       <th>地點</th>
       <th>描述</th>
+      <th>通報人</th>
+      <th>學號</th>
+      <th>保管處</th>
       <th>狀態</th>
       <th>建立時間</th>
       <th>操作</th>
@@ -247,20 +218,81 @@
   <tbody id="itemsBody"></tbody>
 </table>
 
-<script>
-  // 如果你的 API 不是跑在本機 8000 埠,改這裡
-  const API_BASE = "http://127.0.0.1:8000";
+<div class="modal-overlay" id="detailModal" onclick="if(event.target === this) closeDetail()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 style="margin:0;font-size:16px;">AI 比對詳情</h2>
+      <button type="button" class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detailContent">載入中…</div>
+  </div>
+</div>
 
-  // rawItemsList:從後端拿到、經過 type/category/status 篩選後的清單(還沒套用關鍵字搜尋)
-  // itemsCache:以 id 為 key 的查表,方便單筆更新畫面時查詢
+<script>
+  // 與 API 同源時留空即可；分開部署再改成完整網址
+  const API_BASE = "";
+  const KEY_STORAGE = "lostfound_admin_key";
+
   let rawItemsList = [];
   let itemsCache = {};
 
+  function safeUrl(url) {
+    if (!url || typeof url !== "string") return "";
+    try {
+      const u = new URL(url, window.location.origin);
+      if (u.protocol === "http:" || u.protocol === "https:") return u.href;
+    } catch (_) {}
+    return "";
+  }
+
+  function getAdminKey() {
+    return localStorage.getItem(KEY_STORAGE) || "";
+  }
+
+  function saveAdminKey() {
+    const key = document.getElementById("adminKeyInput").value.trim();
+    if (!key) {
+      alert("請輸入管理金鑰");
+      return;
+    }
+    localStorage.setItem(KEY_STORAGE, key);
+    loadItems();
+  }
+
+  function clearAdminKey() {
+    localStorage.removeItem(KEY_STORAGE);
+    document.getElementById("adminKeyInput").value = "";
+    document.getElementById("loading").textContent = "請先設定管理金鑰…";
+    document.getElementById("itemsTable").style.display = "none";
+  }
+
+  function adminHeaders(extra = {}) {
+    const key = getAdminKey();
+    return { "X-Admin-Key": key, ...extra };
+  }
+
+  async function adminFetch(url, options = {}) {
+    const headers = { ...adminHeaders(), ...(options.headers || {}) };
+    const res = await fetch(url, { ...options, headers });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      const detail = data && (data.detail || data.error || data.message);
+      throw new Error(typeof detail === "string" ? detail : `HTTP ${res.status}`);
+    }
+    return data;
+  }
+
   async function loadItems() {
+    if (!getAdminKey()) {
+      document.getElementById("loading").textContent = "請先設定管理金鑰…";
+      document.getElementById("itemsTable").style.display = "none";
+      return;
+    }
+
     const type = document.getElementById("filterType").value;
     const status = document.getElementById("filterStatus").value;
     const category = document.getElementById("filterCategory").value;
-
     const params = new URLSearchParams();
     if (type) params.append("type", type);
     if (status) params.append("status", status);
@@ -269,162 +301,246 @@
     const loadingEl = document.getElementById("loading");
     const tableEl = document.getElementById("itemsTable");
     loadingEl.style.display = "block";
+    loadingEl.textContent = "載入中…";
     tableEl.style.display = "none";
 
     try {
-      const res = await fetch(`${API_BASE}/items?${params.toString()}`);
-      const data = await res.json();
+      const data = await adminFetch(`${API_BASE}/admin/items?${params}`);
       rawItemsList = data.items || [];
-
       itemsCache = {};
       for (const item of rawItemsList) itemsCache[item.id] = item;
-
-      // 重新載入後,關鍵字搜尋欄位的篩選也要重新套用一次
       filterLocalItems();
       updatePendingBadge();
       loadingEl.style.display = "none";
       tableEl.style.display = "table";
     } catch (err) {
-      loadingEl.textContent = "載入失敗,請確認 API 伺服器是否正在執行(" + err.message + ")";
+      loadingEl.textContent = "載入失敗：" + err.message;
     }
   }
 
-  // 在已經從後端拿到的 rawItemsList 裡,依關鍵字即時篩選地點/描述,不用重新打 API
   function filterLocalItems() {
     const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
     let filtered = rawItemsList;
-
     if (keyword) {
       filtered = rawItemsList.filter(item =>
         (item.location && item.location.toLowerCase().includes(keyword)) ||
         (item.description && item.description.toLowerCase().includes(keyword))
       );
     }
-
     renderItems(filtered);
   }
 
   function renderItems(items) {
     const tbody = document.getElementById("itemsBody");
-    tbody.innerHTML = "";
+    tbody.replaceChildren();
 
     if (items.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;">目前沒有符合條件的物品</td></tr>`;
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 8;
+      td.style.textAlign = "center";
+      td.style.color = "#888";
+      td.textContent = "目前沒有符合條件的物品";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
       return;
     }
 
     for (const item of items) {
       const tr = document.createElement("tr");
-      tr.setAttribute("data-item-id", item.id);
+      tr.dataset.itemId = item.id;
       tbody.appendChild(tr);
       fillRow(tr, item);
     }
   }
 
-  // 把單一 <tr> 的內容,依 item 資料填好(新增列、或更新列都共用這個函式)
   function fillRow(tr, item) {
+    tr.replaceChildren();
     const typeLabel = item.type === "found" ? "拾獲" : "遺失";
     const typeClass = item.type === "found" ? "found" : "lost";
     const statusLabel = {
-      pending: "待審核",
-      open: "比對中",
-      closed: "已結案",
-      rejected: "已拒絕",
+      pending: "待審核", open: "比對中", closed: "已結案", rejected: "已拒絕",
     }[item.status] || item.status;
-    const statusClass = "status-" + item.status;
 
-    let actionHtml = "";
-    if (item.status === "pending") {
-      actionHtml = `
-        <button class="action-btn approve-btn" onclick="approveItem('${item.id}')">審核通過</button>
-        <button class="action-btn reject-btn" onclick="rejectItem('${item.id}')">拒絕</button>
-      `;
-    } else if (item.status === "open") {
-      actionHtml = `
-        <button class="action-btn detail-btn" onclick="showDetail('${item.id}')">查看詳情</button>
-        <button class="action-btn" onclick="updateStatus('${item.id}', 'closed')">標記結案</button>
-      `;
+    const photoTd = document.createElement("td");
+    const imgUrl = safeUrl(item.image_url);
+    if (imgUrl) {
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.src = imgUrl;
+      img.alt = "";
+      img.onerror = () => { img.style.display = "none"; };
+      photoTd.appendChild(img);
     } else {
-      actionHtml = `<span style="color:#aaa;">-</span>`;
+      photoTd.textContent = "-";
     }
 
-    tr.innerHTML = `
-      <td>${item.image_url ? `<img class="thumb" src="${item.image_url}" onerror="this.style.display='none'">` : "-"}</td>
-      <td><span class="tag ${typeClass}">${typeLabel}</span></td>
-      <td>${item.category || "-"}</td>
-      <td>${item.location || "-"}</td>
-      <td>${item.description || "-"}</td>
-      <td class="${statusClass}">${statusLabel}</td>
-      <td>${formatDate(item.created_at)}</td>
-      <td>${actionHtml}</td>
-    `;
+    const typeTd = document.createElement("td");
+    const tag = document.createElement("span");
+    tag.className = "tag " + typeClass;
+    tag.textContent = typeLabel;
+    typeTd.appendChild(tag);
+
+    const cells = [
+      photoTd,
+      typeTd,
+      textCell(item.category || "-"),
+      textCell(item.location || "-"),
+      textCell(item.description || "-"),
+      textCell(item.line_user_id || "-"),
+      textCell(item.student_id || "-"),
+      textCell(item.custodian || "-"),
+    ];
+
+    const statusTd = document.createElement("td");
+    statusTd.className = "status-" + (item.status || "");
+    statusTd.textContent = statusLabel;
+    cells.push(statusTd);
+    cells.push(textCell(formatDate(item.created_at)));
+
+    const actionTd = document.createElement("td");
+    if (item.status === "pending") {
+      actionTd.appendChild(makeBtn("審核通過", "action-btn approve-btn", () => approveItem(item.id)));
+      actionTd.appendChild(makeBtn("拒絕", "action-btn reject-btn", () => rejectItem(item.id)));
+    } else if (item.status === "open") {
+      actionTd.appendChild(makeBtn("查看詳情", "action-btn detail-btn", () => showDetail(item.id)));
+      actionTd.appendChild(makeBtn("標記結案", "action-btn", () => updateStatus(item.id, "closed")));
+    } else {
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "-";
+      actionTd.appendChild(span);
+    }
+    cells.push(actionTd);
+
+    for (const cell of cells) tr.appendChild(cell);
+  }
+
+  function textCell(text) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    return td;
+  }
+
+  function makeBtn(label, className, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = className;
+    btn.textContent = label;
+    btn.addEventListener("click", onClick);
+    return btn;
   }
 
   function formatDate(isoStr) {
     if (!isoStr) return "-";
-    const d = new Date(isoStr);
-    return d.toLocaleString("zh-TW", { hour12: false });
+    return new Date(isoStr).toLocaleString("zh-TW", { hour12: false });
   }
 
-  // 查看詳情:呼叫既有的 matches API,顯示這筆物品的 AI 比對排序結果
   async function showDetail(itemId) {
     const modal = document.getElementById("detailModal");
     const content = document.getElementById("detailContent");
     modal.classList.add("show");
-    content.innerHTML = `<p style="color:#718096;font-size:13px;">載入中...</p>`;
+    content.textContent = "載入中…";
 
     try {
       const sourceItem = itemsCache[itemId];
-
-      const res = await fetch(`${API_BASE}/items/${itemId}/matches`);
-      const data = await res.json();
+      const data = await adminFetch(`${API_BASE}/items/${itemId}/matches`);
       const matches = data.matches || [];
+      content.replaceChildren();
 
-      let html = "";
-
-      // 上方顯示這筆物品本身(比對的來源)
       if (sourceItem) {
-        const typeLabel = sourceItem.type === "found" ? "拾獲" : "遺失";
-        html += `
-          <div class="source-item">
-            ${sourceItem.image_url ? `<img src="${sourceItem.image_url}" onerror="this.style.display='none'">` : ""}
-            <div style="font-size:13px;">
-              <div><strong>${typeLabel}物品</strong> ・ ${sourceItem.category || "-"}</div>
-              <div style="color:#718096;margin-top:2px;">${sourceItem.location || "-"} ・ ${sourceItem.description || "無描述"}</div>
-            </div>
-          </div>
-        `;
+        const box = document.createElement("div");
+        box.className = "source-item";
+        const imgUrl = safeUrl(sourceItem.image_url);
+        if (imgUrl) {
+          const img = document.createElement("img");
+          img.src = imgUrl;
+          img.alt = "";
+          img.onerror = () => { img.style.display = "none"; };
+          box.appendChild(img);
+        }
+        const info = document.createElement("div");
+        info.style.fontSize = "13px";
+        const title = document.createElement("div");
+        const strong = document.createElement("strong");
+        strong.textContent = (sourceItem.type === "found" ? "拾獲" : "遺失") + "物品";
+        title.appendChild(strong);
+        title.appendChild(document.createTextNode(" ・ " + (sourceItem.category || "-")));
+        const sub = document.createElement("div");
+        sub.style.color = "#718096";
+        sub.style.marginTop = "2px";
+        sub.textContent = `${sourceItem.location || "-"} ・ ${sourceItem.description || "無描述"}`;
+        info.appendChild(title);
+        info.appendChild(sub);
+        box.appendChild(info);
+        content.appendChild(box);
       }
 
       if (matches.length === 0) {
-        html += `<p style="color:#718096;font-size:13px;text-align:center;padding:16px 0;">目前 AI 尚未比對出任何相符物品</p>`;
-      } else {
-        html += `<p style="font-size:13px;font-weight:bold;margin-bottom:10px;">AI 比對排序(共 ${matches.length} 筆,依相似度排列)</p>`;
-        matches.forEach((m, index) => {
-          const rank = index + 1;
-          const similarityPercent = (m.similarity * 100).toFixed(1);
-          html += `
-            <div class="rank-item">
-              <div class="rank-number ${rank === 1 ? 'top1' : ''}">#${rank}</div>
-              ${m.image_url ? `<img src="${m.image_url}" onerror="this.style.display='none'">` : ""}
-              <div class="rank-info">
-                <div><strong>${m.category || "-"}</strong> ・ ${m.location || "-"}</div>
-                <div style="color:#718096;">${m.description || "無描述"}</div>
-                <div style="display:flex;align-items:center;">
-                  <div class="similarity-bar-bg" style="flex:1;">
-                    <div class="similarity-bar-fill" style="width:${similarityPercent}%;"></div>
-                  </div>
-                  <span class="similarity-text">${similarityPercent}%</span>
-                </div>
-              </div>
-            </div>
-          `;
-        });
+        const p = document.createElement("p");
+        p.style.cssText = "color:#718096;font-size:13px;text-align:center;padding:16px 0;";
+        p.textContent = "目前 AI 尚未比對出任何相符物品";
+        content.appendChild(p);
+        return;
       }
 
-      content.innerHTML = html;
+      const heading = document.createElement("p");
+      heading.style.cssText = "font-size:13px;font-weight:bold;margin-bottom:10px;";
+      heading.textContent = `AI 比對排序（共 ${matches.length} 筆，依相似度排列）`;
+      content.appendChild(heading);
+
+      matches.forEach((m, index) => {
+        const rank = index + 1;
+        const pct = (m.similarity * 100).toFixed(1);
+        const row = document.createElement("div");
+        row.className = "rank-item";
+
+        const num = document.createElement("div");
+        num.className = "rank-number" + (rank === 1 ? " top1" : "");
+        num.textContent = "#" + rank;
+        row.appendChild(num);
+
+        const imgUrl = safeUrl(m.image_url);
+        if (imgUrl) {
+          const img = document.createElement("img");
+          img.src = imgUrl;
+          img.alt = "";
+          img.onerror = () => { img.style.display = "none"; };
+          row.appendChild(img);
+        }
+
+        const info = document.createElement("div");
+        info.className = "rank-info";
+        const line1 = document.createElement("div");
+        const strong = document.createElement("strong");
+        strong.textContent = m.category || "-";
+        line1.appendChild(strong);
+        line1.appendChild(document.createTextNode(" ・ " + (m.location || "-")));
+        const line2 = document.createElement("div");
+        line2.style.color = "#718096";
+        line2.textContent = m.description || "無描述";
+        const barWrap = document.createElement("div");
+        barWrap.style.display = "flex";
+        barWrap.style.alignItems = "center";
+        const barBg = document.createElement("div");
+        barBg.className = "similarity-bar-bg";
+        const barFill = document.createElement("div");
+        barFill.className = "similarity-bar-fill";
+        barFill.style.width = pct + "%";
+        barBg.appendChild(barFill);
+        const pctText = document.createElement("span");
+        pctText.className = "similarity-text";
+        pctText.textContent = pct + "%";
+        barWrap.appendChild(barBg);
+        barWrap.appendChild(pctText);
+        info.appendChild(line1);
+        info.appendChild(line2);
+        info.appendChild(barWrap);
+        row.appendChild(info);
+        content.appendChild(row);
+      });
     } catch (err) {
-      content.innerHTML = `<p style="color:#c53030;font-size:13px;">載入失敗: ${err.message}</p>`;
+      content.textContent = "載入失敗：" + err.message;
     }
   }
 
@@ -433,42 +549,42 @@
   }
 
   async function approveItem(itemId) {
-    if (!confirm("確定審核通過這筆物品嗎?通過後會公開讓使用者搜尋比對。")) return;
+    if (!confirm("確定審核通過這筆物品嗎？通過後會公開讓使用者搜尋比對。")) return;
     await callActionApi(itemId, `${API_BASE}/items/${itemId}/approve`, "open");
   }
 
   async function rejectItem(itemId) {
-    if (!confirm("確定要拒絕這筆物品嗎?")) return;
+    if (!confirm("確定要拒絕這筆物品嗎？")) return;
     await callActionApi(itemId, `${API_BASE}/items/${itemId}/reject`, "rejected");
   }
 
   async function callActionApi(itemId, url, newStatus) {
-    const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const tr = document.querySelector(`tr[data-item-id="${CSS.escape(itemId)}"]`);
     const actionCell = tr ? tr.querySelector("td:last-child") : null;
-    if (actionCell) actionCell.innerHTML = `<span style="color:#aaa;">處理中...</span>`;
+    if (actionCell) {
+      actionCell.replaceChildren();
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "處理中…";
+      actionCell.appendChild(span);
+    }
 
     try {
-      const res = await fetch(url, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "操作失敗");
-
-      // 目前篩選狀態如果就是「待審核」,審核後這筆會離開清單,直接從畫面移除
+      await adminFetch(url, { method: "POST" });
       const currentFilter = document.getElementById("filterStatus").value;
       if (currentFilter === "pending" && tr) {
         tr.remove();
         delete itemsCache[itemId];
         rawItemsList = rawItemsList.filter(i => i.id !== itemId);
         updatePendingBadge();
-        if (Object.keys(itemsCache).length === 0) {
-          document.getElementById("itemsBody").innerHTML =
-            `<tr><td colspan="8" style="text-align:center;color:#888;">目前沒有符合條件的物品</td></tr>`;
-        }
+        if (Object.keys(itemsCache).length === 0) renderItems([]);
       } else if (itemsCache[itemId] && tr) {
         itemsCache[itemId].status = newStatus;
         fillRow(tr, itemsCache[itemId]);
+        updatePendingBadge();
       }
     } catch (err) {
-      alert("操作失敗: " + err.message);
+      alert("操作失敗：" + err.message);
       if (tr && itemsCache[itemId]) fillRow(tr, itemsCache[itemId]);
     }
   }
@@ -481,49 +597,36 @@
   }
 
   async function updateStatus(itemId, newStatus) {
-    if (!confirm("確定要將這筆物品標記為已結案嗎?")) return;
-
-    // 先在畫面上立刻反映(樂觀更新),按鈕暫時失能避免重複點擊
-    const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    if (!confirm("確定要將這筆物品標記為已結案嗎？")) return;
+    const tr = document.querySelector(`tr[data-item-id="${CSS.escape(itemId)}"]`);
     const actionCell = tr ? tr.querySelector("td:last-child") : null;
-    if (actionCell) actionCell.innerHTML = `<span style="color:#aaa;">更新中...</span>`;
+    if (actionCell) {
+      actionCell.replaceChildren();
+      const span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "更新中…";
+      actionCell.appendChild(span);
+    }
 
     const formData = new FormData();
     formData.append("status", newStatus);
 
     try {
-      const res = await fetch(`${API_BASE}/items/${itemId}`, {
-        method: "PATCH",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("更新失敗");
-
-      // 成功後,更新本地快取,並只重繪這一列,不重新打整個 /items
+      await adminFetch(`${API_BASE}/items/${itemId}`, { method: "PATCH", body: formData });
       if (itemsCache[itemId]) {
         itemsCache[itemId].status = newStatus;
         if (tr) fillRow(tr, itemsCache[itemId]);
       } else {
-        loadItems(); // 保險起見,若本地找不到這筆快取就整頁重抓
+        loadItems();
       }
     } catch (err) {
-      alert("更新失敗: " + err.message);
-      if (tr) fillRow(tr, itemsCache[itemId]); // 還原原本畫面
+      alert("更新失敗：" + err.message);
+      if (tr && itemsCache[itemId]) fillRow(tr, itemsCache[itemId]);
     }
   }
 
-  // 頁面載入時自動抓一次資料
-  loadItems();
+  document.getElementById("adminKeyInput").value = getAdminKey();
+  if (getAdminKey()) loadItems();
 </script>
-
-<div class="modal-overlay" id="detailModal" onclick="if(event.target === this) closeDetail()">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h2 style="margin:0;font-size:16px;">AI 比對詳情</h2>
-      <button class="modal-close" onclick="closeDetail()">✕</button>
-    </div>
-    <div id="detailContent">載入中...</div>
-  </div>
-</div>
-
 </body>
 </html>
